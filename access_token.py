@@ -1,3 +1,7 @@
+""" Author: @kooqooo
+실행 안되는 코드임
+"""
+
 import base64
 import requests
 

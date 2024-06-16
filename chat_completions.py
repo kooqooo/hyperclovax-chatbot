@@ -10,6 +10,7 @@ Python 3.12.4 버전의 내장 time 모듈을 사용하여 8회 실험을 했습
 2. deque에 maxlen=4를 설정하여 저장하는 경우: 74.3초
 결론: 큰 차이가 없음. list를 사용하는 것이 더 편리함.
 """
+
 from ast import literal_eval
 
 import requests
@@ -44,7 +45,7 @@ class CompletionExecutor:
                     print(line.decode("utf-8"))
                     result.append(line.decode("utf-8"))
         return result
-                    
+
     def execute(self, completion_request):
         headers = {
             "X-NCP-CLOVASTUDIO-API-KEY": self.__api_key,
@@ -70,7 +71,7 @@ def parse_response(response: str) -> str:
     """
     실제 message의 content를 반환합니다.
     """
-    response_dict = literal_eval(response[5:]) # "data:" 제거
+    response_dict = literal_eval(response[5:])  # "data:" 제거
     return response_dict["message"]["content"].replace("\\n", "\n")
 
 
@@ -79,7 +80,7 @@ if __name__ == "__main__":
 
     with open("secrets.yaml", encoding="utf-8") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
-    
+
     preset_text = [
         {"role": "system", "content": "사용자의 질문에 답변합니다."},
         {"role": "user", "content": "보정동 근처 맛집 추천해줘"}, # <- 맛없는 거 추천해줌
@@ -90,15 +91,14 @@ if __name__ == "__main__":
         "topP": 0.8,
         "topK": 0,
         "maxTokens": 256,
-        "temperature": 0.1,    # 0으로 설정 불가
+        "temperature": 0.1,  # 0으로 설정 불가
         "repeatPenalty": 5.0,
         "stopBefore": [],
         "includeAiFilters": True,
         "seed": 0,
     }
-    
+
     completion_executor = CompletionExecutor(**config["test"])
-    response = completion_executor.execute(request_data)    # 대략 10~20초 정도 소요됨
+    response = completion_executor.execute(request_data)  # 대략 10~20초 정도 소요됨
     print(response)
     print(parse_response(response))
-    

@@ -1,3 +1,7 @@
+# Data folder
+clovastudioguide
+url_to_filename_map.json
+
 # secret keys
 secrets.yaml
 

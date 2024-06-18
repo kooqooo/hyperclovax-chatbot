@@ -33,7 +33,7 @@ class CompletionExecutor:
             "Accept": "text/event-stream",
         }
         with requests.post(
-            self.__host + self.__url_postfix,
+            f"{self.__host}/testapp/v1/chat-completions/{self.__test_app_id}",
             headers=headers,
             json=completion_request,
             stream=True,

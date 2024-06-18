@@ -17,12 +17,12 @@ import requests
 
 
 class CompletionExecutor:
-    def __init__(self, host, api_key, api_key_primary_val, request_id, url_postfix):
+    def __init__(self, api_key, api_key_primary_val, request_id, test_app_id, host="https://clovastudio.stream.ntruss.com"):
         self.__host = host
         self.__api_key = api_key
         self.__api_key_primary_val = api_key_primary_val
         self.__request_id = request_id
-        self.__url_postfix = url_postfix
+        self.__test_app_id = test_app_id
 
     def execute_all(self, completion_request):
         headers = {
@@ -55,7 +55,7 @@ class CompletionExecutor:
             "Accept": "text/event-stream",
         }
         with requests.post(
-            self.__host + self.__url_postfix,
+            f"{self.__host}/testapp/v1/chat-completions/{self.__test_app_id}",
             headers=headers,
             json=completion_request,
             stream=True,

@@ -6,6 +6,7 @@ from tqdm import tqdm
 import requests
 
 from preprocessing_from_html import main as preprocessing_main
+from preprocessing_from_html import load_html_with_langchain, convert_metadata_source_to_url
 
 
 class SegmentationExecutor:
@@ -18,22 +19,29 @@ class SegmentationExecutor:
  
     def _send_request(self, completion_request):
         headers = {
-            "Content-Type": "application/json; charset=utf-8",
             "X-NCP-CLOVASTUDIO-API-KEY": self._api_key,
             "X-NCP-APIGW-API-KEY": self._api_key_primary_val,
             "X-NCP-CLOVASTUDIO-REQUEST-ID": self._request_id, # 없어도 작동 잘함
+            "Content-Type": "application/json; charset=utf-8",
         }
  
-        conn = http.client.HTTPSConnection(self._host)
-        conn.request(
-            "POST",
-            f"/testapp/v1/api-tools/segmentation/{self._test_app_id}",
-            json.dumps(completion_request),
-            headers
+        # conn = http.client.HTTPSConnection(self._host)
+        # conn.request(
+        #     "POST",
+        #     f"/testapp/v1/api-tools/segmentation/{self._test_app_id}",
+        #     json.dumps(completion_request),
+        #     headers
+        # )
+        # response = conn.getresponse()
+        
+        # result = json.loads(response.read().decode(encoding="utf-8"))
+        # conn.close()
+        response = requests.post(
+            f"https://{self._host}/testapp/v1/api-tools/segmentation/{self._request_id}",
+            headers=headers,
+            json=completion_request
         )
-        response = conn.getresponse()
-        result = json.loads(response.read().decode(encoding="utf-8"))
-        conn.close()
+        result = response.json()
         return result
  
     def execute(self, completion_request):
@@ -53,8 +61,11 @@ if __name__ == "__main__":
     segmentation_executor = SegmentationExecutor(**config["test"])
  
     chunked_html = []
-    clovastudiodatas_flattened = preprocessing_main()
-    
+    # clovastudiodatas_flattened = preprocessing_main()
+    clovastudiodatas = load_html_with_langchain()
+    clovastudiodatas_flattened = convert_metadata_source_to_url(clovastudiodatas)
+    print(clovastudiodatas_flattened[0].page_content)
+    print(type(clovastudiodatas_flattened[0]))
     for htmldata in tqdm(clovastudiodatas_flattened):
         request_json_string = f"""{{
             "postProcessMaxSize": 100,

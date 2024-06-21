@@ -8,7 +8,7 @@ from langchain.text_splitter import (CharacterTextSplitter,
                                      RecursiveCharacterTextSplitter,
                                      TokenTextSplitter,
                                      SentenceTransformersTokenTextSplitter,)
-from transformers import RobertaTokenizerFast
+from transformers import BertTokenizerFast
 # from langchain_experimental.text_splitter import SemanticChunker
 # from langchain_openai.embeddings import OpenAIEmbeddings
 
@@ -59,7 +59,7 @@ token_splitter = TokenTextSplitter(
     chunk_overlap=5   # 청크 간의 겹침 부분
 )
 
-hf_tokenizer = RobertaTokenizerFast.from_pretrained("klue/roberta-small")
+hf_tokenizer = BertTokenizerFast.from_pretrained("klue/roberta-small")
 hf_token_splitter = CharacterTextSplitter.from_huggingface_tokenizer(
     hf_tokenizer, 
     chunk_size=250, 

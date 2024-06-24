@@ -1,7 +1,15 @@
 """ Author: @kooqooo
-Hugging Face API로 테스트 결과,
-torch를 사용하여 embedding을 하면 결과가 유사하게 나옴
-langchain의 embed_documents함수는 유사하지 않음
+[Hugging Face API로 테스트 결과]
+- torch를 사용하여 embedding을 하면 결과가 유사하게 나옴
+- langchain의 embed_documents함수는 유사하지 않음
+
+[예상한 원인]
+- langchain의 HuggingFaceEmbeddings 클래스는 sentence-transformers를 사용하고 있음
+- "BM-K/KoSimCSE-roberta-multitask" 모델은 sentence-transformers에서 지원하지 않음
+- "jhgan/ko-sroberta-multitask", "snunlp/KR-SBERT-V40K-klueNLI-augSTS" 모델은 사용 가능
+
+[그 이후의 결과]
+- 그럼에도 torch와 langchain의 결과가 다르게 나옴
 """
 
 from transformers import AutoTokenizer, AutoModel
@@ -35,25 +43,22 @@ class TextEmbedder:
             outputs = self.model(**inputs)
         return outputs.last_hidden_state[:, 0, :]  # Return the embedding for the [CLS] token
 
-class LangchainEmbedder:
-    def __init__(self, model_name: str):
-        self.model_name = model_name
-        self.embedder = HuggingFaceEmbeddings(model_name=self.model_name)
-        
-    def embed_text(self, text: str):
-        return self.embedder.embed_documents([text])
 
 if __name__ == "__main__":
-    model_name = "BM-K/KoSimCSE-roberta-multitask"
+    # model_name = "BM-K/KoSimCSE-roberta-multitask" # Not supported by sentence-transformers
+    # model_name = "snunlp/KR-SBERT-V40K-klueNLI-augSTS"
+    model_name = "jhgan/ko-sroberta-multitask"
+    text = "안녕하세요"
 
     # Using the custom TextEmbedder class
     custom_embedder = TextEmbedder(model_name)
-    text = "안녕하세요"
     custom_embeddings = custom_embedder.embed_text(text)
     print("Custom Embeddings shape:", custom_embeddings.shape)
-    print("Custom Embeddings:", custom_embeddings)
+    custom_embeddings = custom_embeddings.flatten().to("cpu")
+    print("Custom Embeddings:", custom_embeddings[-5:])
     
     # Using the LangchainEmbedder class
-    langchain_embedder = LangchainEmbedder(model_name)
-    langchain_embeddings = langchain_embedder.embed_text(text)
-    print("Langchain Embeddings:", langchain_embeddings)
+    langchain_embeddings = HuggingFaceEmbeddings(model_name=model_name)
+    query_result = langchain_embeddings.embed_query(text)
+    print("Langchain Embeddings shape:", len(query_result))
+    print("Langchain Embeddings:", query_result[-5:])

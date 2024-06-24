@@ -8,12 +8,17 @@
 - "BM-K/KoSimCSE-roberta-multitask" 모델은 sentence-transformers에서 지원하지 않음
 - "jhgan/ko-sroberta-multitask", "snunlp/KR-SBERT-V40K-klueNLI-augSTS" 모델은 사용 가능
 
-[그 이후의 결과]
-- 그럼에도 torch와 langchain의 결과가 다르게 나옴
+[새로 확인한 사항]
+1. sentence-transformers를 지원하지 않는 모델은 torch를 사용하는 것과 허깅페이스 API를 사용하는 것이 유사한 결과를 보임
+2. sentence-transformers를 지원하는 모델은 langchain과 허깅페이스 API와 유사한 결과를 보임
+3. sentence-transformers 지원하는 모델에 한하여 langchain의 HuggingFaceEmbeddings 클래스 사용 가능
 """
+import os
 
 from transformers import AutoTokenizer, AutoModel
 from langchain_huggingface.embeddings.huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings.huggingface import HuggingFaceInferenceAPIEmbeddings
+from sentence_transformers import SentenceTransformer
 import torch
 
 class TextEmbedder:
@@ -46,8 +51,8 @@ class TextEmbedder:
 
 if __name__ == "__main__":
     # model_name = "BM-K/KoSimCSE-roberta-multitask" # Not supported by sentence-transformers
-    # model_name = "snunlp/KR-SBERT-V40K-klueNLI-augSTS"
-    model_name = "jhgan/ko-sroberta-multitask"
+    # model_name = "snunlp/KR-SBERT-V40K-klueNLI-augSTS" # Supported by sentence-transformers
+    model_name = "jhgan/ko-sroberta-multitask"  # Supported by sentence-transformers
     text = "안녕하세요"
 
     # Using the custom TextEmbedder class
@@ -55,10 +60,23 @@ if __name__ == "__main__":
     custom_embeddings = custom_embedder.embed_text(text)
     print("Custom Embeddings shape:", custom_embeddings.shape)
     custom_embeddings = custom_embeddings.flatten().to("cpu")
-    print("Custom Embeddings:", custom_embeddings[-5:])
+    print("Custom Embeddings:", custom_embeddings[:5])
     
     # Using the LangchainEmbedder class
     langchain_embeddings = HuggingFaceEmbeddings(model_name=model_name)
     query_result = langchain_embeddings.embed_query(text)
     print("Langchain Embeddings shape:", len(query_result))
-    print("Langchain Embeddings:", query_result[-5:])
+    print("Langchain Embeddings:", query_result[:5])
+    
+    # Using the LangchainInferenceAPIEmbedder class
+    inference_api_key = os.getenv("HF_API_KEY", "YOUR_API_KEY")
+    inference_api_embeddings = HuggingFaceInferenceAPIEmbeddings(api_key=inference_api_key, model_name=model_name)
+    api_query_result = inference_api_embeddings.embed_query(text)
+    print("Inference API Embeddings shape:", len(api_query_result))
+    print("Inference API Embeddings:", api_query_result[:5])
+
+    # Using sentence-transformers
+    model = SentenceTransformer(model_name)                     # 모델 로드
+    embeddings = model.encode([text], convert_to_tensor=True)   # 문장 임베딩 생성
+    print("Sentence-Transformers Embeddings shape:", embeddings.shape)
+    print("Sentence-Transformers Embeddings:", embeddings[0][:5])

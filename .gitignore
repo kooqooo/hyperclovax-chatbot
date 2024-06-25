@@ -1,6 +1,8 @@
 # Data folder
 clovastudioguide
 url_to_filename_map.json
+test*
+*.txt
 
 # secret keys
 secrets.yaml

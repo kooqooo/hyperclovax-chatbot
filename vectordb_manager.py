@@ -10,13 +10,9 @@ def faiss_inference(query):
     faiss를 이용해 JD 키워드 한줄한줄 받아와서 유사한 기술면접 질문 4개씩을 불러옵니다.
     output으로는 (4 * 키워드 줄 개수 - 중복된 문장)개의 질문이 반환됩니다
     """
-    embeddings = HuggingFaceEmbeddings(
-        model_name="jhgan/ko-sroberta-multitask", model_kwargs={"device": "cuda"}
-    )
+    embeddings = HuggingFaceEmbeddings(model_name="jhgan/ko-sroberta-multitask", model_kwargs={"device": "cuda"})
     store_name = "./FAISS_INDEX_TAG"
-    new_db = FAISS.load_local(
-        store_name, embeddings, allow_dangerous_deserialization=True
-    )
+    new_db = FAISS.load_local(store_name, embeddings, allow_dangerous_deserialization=True)
     results = query.split("\n")
     final_result = []
     for i in results:
@@ -28,10 +24,18 @@ def faiss_inference(query):
 
 
 def main():
+    import torch
     from text_splitters import character_splitter
 
     model_name = "jhgan/ko-sroberta-multitask"
-    hf_embeddings = HuggingFaceEmbeddings(model_name=model_name)
+    model_kwargs = {'device': "cuda" if torch.cuda.is_available() else "cpu"}
+    encode_kwargs = {'normalize_embeddings': True} # set True to compute cosine similarity
+
+    hf_embeddings = HuggingFaceEmbeddings(
+        model_name=model_name,
+        model_kwargs=model_kwargs,
+        encode_kwargs=encode_kwargs
+    )
 
     # # TextLoader의 load_and_split 메소드를 사용하는 방식
     # split_docs = TextLoader("./wiki.txt").load_and_split(character_splitter)
@@ -47,16 +51,10 @@ def main():
     chroma_db = Chroma.from_texts(texts, hf_embeddings)
     print(f"{chroma_db.embeddings = }")
     print()
-    print(
-        f"{chroma_db.similarity_search_with_score('반갑습니다', k=2) = }"
-    )  # Cosine Distance, 작을수록 유사도가 높음
+    print(f"{chroma_db.similarity_search_with_score('반갑습니다', k=2) = }")  # Cosine Distance, 작을수록 유사도가 높음, 0~2 사이의 값
     print()
-    print(
-        f"{chroma_db.similarity_search_with_relevance_scores('반갑습니다', k=2) = }"
-    )  # Relevance Score, 0~1 사이의 값이 나와야하는데 음수가나옴
-    print(
-        f"{chroma_db.similarity_search_with_relevance_scores('반갑습니다', k=2, score_threshold=0.7) = }"
-    )  # 따라서 이 threshold를 만족하는 결과가 없음
+    print(f"{chroma_db.similarity_search_with_relevance_scores('반갑습니다', k=2) = }")  # Relevance Score, 0~1 사이의 값
+    print(f"{chroma_db.similarity_search_with_relevance_scores('반갑습니다', k=2, score_threshold=0.5) = }")
 
 
 if __name__ == "__main__":

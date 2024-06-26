@@ -18,25 +18,29 @@ embeddings = HuggingFaceEmbeddings(
     model_kwargs=model_kwargs,
     encode_kwargs=encode_kwargs
 )
-faiss_store_name = "./FAISS_INDEX_TAG"
+faiss_store_name = "./FAISS_INDEXES"
 
 
-# def make_faiss_index(path: str | Path):
-#     split_docs = TextLoader(path).load_and_split(character_splitter)
-#     new_db = FAISS.from_documents(split_docs, embeddings)
-#     new_db.save_local(faiss_store_name)
+def make_faiss_index(path: str | Path):
+    split_docs = TextLoader(path).load_and_split(character_splitter)
+    new_db = FAISS.from_documents(split_docs, embeddings)
+    new_db.save_local(faiss_store_name)
 
 
-# def faiss_inference(query):
-#     new_db = FAISS.load_local(faiss_store_name, embeddings, allow_dangerous_deserialization=True)
-#     results = query.split("\n")
-#     final_result = []
-#     for i in results:
-#         docs = new_db.similarity_search(i, k=4)
-#         page_contents = [final_result.append(doc.page_content) for doc in docs]
-#     # 중복된 문장 제거
-#     final_result = list(set(final_result))
-#     return final_result
+def faiss_inference(query, k=1):
+    new_db = FAISS.load_local(faiss_store_name, embeddings, allow_dangerous_deserialization=True)
+    # results = query.split("\n")
+    # final_result = []
+    # for i in results:
+    #     docs = new_db.similarity_search(i, k=4)
+    #     page_contents = [final_result.append(doc.page_content) for doc in docs]
+    # # 중복된 문장 제거
+    # final_result = list(set(final_result))
+    # return final_result
+    if k == 1:
+        return new_db.similarity_search(query, k=1)[0].page_content
+    else:
+        return list(new_db.similarity_search(query, k=k)[x].page_content for x in range(k))
 
 
 def main():
@@ -52,8 +56,9 @@ def main():
             print()
         print()
 
-    # TextLoader의 load_and_split 메소드를 사용하는 방식
+
     data_path = "./wiki_python.txt"
+    # TextLoader의 load_and_split 메소드를 사용하는 방식
     split_docs = TextLoader(data_path).load_and_split(character_splitter) # 파이썬 위키백과 문서
     # # Print the split documents
     # print(*[split_doc.page_content for split_doc in split_docs], sep='\n\n')
@@ -66,8 +71,7 @@ def main():
     print()
 
     query = "파이썬을 어디에서 관리하는가?"
-    print(f"/** '{query}'와 유사도가 높은 답은 '->'로 표시 **/")
-    _print(chroma_db.similarity_search(query))
+    print(f"/** <{query}>와 유사도가 높은 답은 '->'로 표시 **/")
     _print(chroma_db.similarity_search_with_score(query))
     _print(chroma_db.similarity_search_with_relevance_scores(query))
 
@@ -77,12 +81,17 @@ def main():
     chroma_db = Chroma.from_texts(texts, embeddings)
     # print(f"{chroma_db.embeddings = }")
     query = "반갑습니다"
-    print(f"/** '{query}'와 유사도가 높은 답은 '->'로 표시 **/")
+    print(f"/** <{query}>와 유사도가 높은 답은 '->'로 표시 **/")
     _print(chroma_db.similarity_search_with_score(query, k=2))  # Cosine Distance, 0~2 사이의 값, 작을수록 유사도가 높음
     _print(chroma_db.similarity_search_with_relevance_scores(query, k=2))  # Relevance Score, 0~1 사이의 값, 클수록 유사도가 높음
-    _print(chroma_db.similarity_search_with_relevance_scores(query, k=2, score_threshold=0.5))
 
-    # # 텍스트를 직접 넣어서 FAISS 객체를 생성하는 방식
+
+    # TextLoader 사용하여 FAISS 객체를 생성하는 방식
+    make_faiss_index(data_path)
+    query = "파이썬을 어디에서 관리하는가?"
+    faiss_result = faiss_inference(query, k=2)
+    print(f"/** <{query}>와 유사도가 높은 답은?? **/")
+    print(faiss_result)
 
 
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ def make_faiss_index(path: str | Path):
 
 
 def faiss_inference(query, k=1):
-    new_db = FAISS.load_local(faiss_store_name, embeddings, allow_dangerous_deserialization=True)
+    db = FAISS.load_local(faiss_store_name, embeddings, allow_dangerous_deserialization=True)
     # results = query.split("\n")
     # final_result = []
     # for i in results:
@@ -38,9 +38,14 @@ def faiss_inference(query, k=1):
     # final_result = list(set(final_result))
     # return final_result
     if k == 1:
-        return new_db.similarity_search(query, k=1)[0].page_content
+        return db.similarity_search(query, k=1)[0].page_content
     else:
-        return list(new_db.similarity_search(query, k=k)[x].page_content for x in range(k))
+        return list(db.similarity_search(query, k=k)[x].page_content for x in range(k))
+
+
+def get_retriever():
+    db = FAISS.load_local(faiss_store_name, embeddings, allow_dangerous_deserialization=True)
+    return db.as_retriever()
 
 
 def main():
@@ -89,9 +94,15 @@ def main():
     # TextLoader 사용하여 FAISS 객체를 생성하는 방식
     make_faiss_index(data_path)
     query = "파이썬을 어디에서 관리하는가?"
-    faiss_result = faiss_inference(query, k=2)
-    print(f"/** <{query}>와 유사도가 높은 답은?? **/")
+    faiss_result = faiss_inference(query, k=1)
+    print(f"/** <{query}>와 유사도가 가장 높은 답은?? **/")
     print(faiss_result)
+
+    
+    # Retriver를 사용하는 방식
+    retriever = get_retriever()
+    retriever_result = retriever.invoke(query)[0]
+    print(retriever_result)
 
 
 if __name__ == "__main__":

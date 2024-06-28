@@ -22,7 +22,7 @@ faiss_store_name = "./FAISS_INDEXES"
 
 
 def make_faiss_index(path: str | Path):
-    split_docs = TextLoader(path).load_and_split(character_splitter)
+    split_docs = TextLoader(path, encoding='utf-8').load_and_split(character_splitter)
     new_db = FAISS.from_documents(split_docs, embeddings)
     new_db.save_local(faiss_store_name)
 
@@ -64,7 +64,7 @@ def main():
 
     data_path = "./wiki_python.txt"
     # TextLoader의 load_and_split 메소드를 사용하는 방식
-    split_docs = TextLoader(data_path).load_and_split(character_splitter) # 파이썬 위키백과 문서
+    split_docs = TextLoader(data_path, encoding='utf-8').load_and_split(character_splitter) # 파이썬 위키백과 문서
     # # Print the split documents
     # print(*[split_doc.page_content for split_doc in split_docs], sep='\n\n')
     for idx, split_doc in enumerate(split_docs):

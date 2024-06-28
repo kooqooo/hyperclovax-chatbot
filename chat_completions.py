@@ -17,7 +17,14 @@ import requests
 
 
 class CompletionExecutor:
-    def __init__(self, api_key, api_key_primary_val, request_id, test_app_id, host="https://clovastudio.stream.ntruss.com"):
+    def __init__(
+        self,
+        api_key,
+        api_key_primary_val,
+        request_id,
+        test_app_id,
+        host="https://clovastudio.stream.ntruss.com"
+    ) -> None:
         self.__host = host
         self.__api_key = api_key
         self.__api_key_primary_val = api_key_primary_val
@@ -76,14 +83,19 @@ def parse_response(response: str) -> str:
 
 
 if __name__ == "__main__":
-    import yaml
-
-    with open("secrets.yaml", encoding="utf-8") as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
+    import os
+    
+    from dotenv import load_dotenv
+    
+    load_dotenv()
+    API_KEY = os.getenv("API_KEY")
+    API_KEY_PRIMARY_VAL = os.getenv("API_KEY_PRIMARY_VAL")
+    REQUEST_ID = os.getenv("REQUEST_ID")
+    TEST_APP_ID = os.getenv("TEST_APP_ID")
 
     preset_text = [
         {"role": "system", "content": "사용자의 질문에 답변합니다."},
-        {"role": "user", "content": "보정동 근처 맛집 추천해줘"}, # <- 맛없는 거 추천해줌
+        {"role": "user", "content": "경기도 용인시 기흥구 보정동 근처 맛집 추천해줘"}, # <- 맛없는 거 추천해줌
     ]
 
     request_data = {
@@ -98,7 +110,13 @@ if __name__ == "__main__":
         "seed": 0,
     }
 
-    completion_executor = CompletionExecutor(**config["test"])
+    completion_executor = CompletionExecutor(
+        api_key=API_KEY,
+        api_key_primary_val=API_KEY_PRIMARY_VAL,
+        request_id=REQUEST_ID,
+        test_app_id=TEST_APP_ID,
+    )
+    
     response = completion_executor.execute(request_data)  # 대략 10~20초 정도 소요됨
     print(response)
     print(parse_response(response))

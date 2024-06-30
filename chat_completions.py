@@ -45,13 +45,13 @@ class CompletionExecutor:
             json=completion_request,
             stream=True,
         ) as r:
-            result = []
+            results = []
             for idx, line in enumerate(r.iter_lines()):
                 if line:
                     print(idx, end=": ")
                     print(line.decode("utf-8"))
-                    result.append(line.decode("utf-8"))
-        return result
+                    results.append(line.decode("utf-8"))
+        return results
 
     def execute(self, completion_request):
         headers = {

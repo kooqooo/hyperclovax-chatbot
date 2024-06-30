@@ -6,6 +6,7 @@ from langchain_community.vectorstores.chroma import Chroma
 from langchain_community.vectorstores.faiss import FAISS
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_huggingface.embeddings.huggingface import HuggingFaceEmbeddings
+from langchain_core.vectorstores import VectorStoreRetriever
 
 from text_splitters import character_splitter
 
@@ -27,23 +28,12 @@ def make_faiss_index(path: str | Path):
     new_db.save_local(faiss_store_name)
 
 
-def faiss_inference(query, k=1):
+def faiss_inference(query: str, k: int = 1) -> list[str]:
     db = FAISS.load_local(faiss_store_name, embeddings, allow_dangerous_deserialization=True)
-    # results = query.split("\n")
-    # final_result = []
-    # for i in results:
-    #     docs = new_db.similarity_search(i, k=4)
-    #     page_contents = [final_result.append(doc.page_content) for doc in docs]
-    # # 중복된 문장 제거
-    # final_result = list(set(final_result))
-    # return final_result
-    if k == 1:
-        return db.similarity_search(query, k=1)[0].page_content
-    else:
-        return list(db.similarity_search(query, k=k)[x].page_content for x in range(k))
+    return list(db.similarity_search(query, k=k)[x].page_content for x in range(k))
 
 
-def get_retriever():
+def get_retriever() -> VectorStoreRetriever:
     db = FAISS.load_local(faiss_store_name, embeddings, allow_dangerous_deserialization=True)
     return db.as_retriever()
 

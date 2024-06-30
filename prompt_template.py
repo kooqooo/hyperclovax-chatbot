@@ -28,13 +28,14 @@ class Prompts:
             self.messages.append(Prompt(message[0], message[1]))
 
     @classmethod
-    def from_message(cls, message: Union[List, Tuple]):
+    def from_message(cls, role: str, content: str) -> "Prompts":
         instance = cls()
-        instance.add_message(message[0], message[1])
+        instance.validate_role(role)
+        instance.add_message(role, content)
         return instance
 
     @classmethod
-    def from_messages(cls, messages: Union[List[Union[List, Tuple]], Tuple[Union[List, Tuple]]]):
+    def from_messages(cls, messages: Union[List[Union[List, Tuple]], Tuple[Union[List, Tuple]]]) -> "Prompts":
         instance = cls()
         for message in messages:
             instance.add_message(message[0], message[1])
@@ -60,6 +61,8 @@ class Prompts:
 
 if __name__ == "__main__":
     # Example usage
+    message = Prompts.from_message("assistant", "Hello, how can I help you?")
+
     messages = Prompts.from_messages(
         [
             ("system", "You are a helpful assistant"),

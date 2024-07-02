@@ -4,6 +4,9 @@ from tqdm import tqdm
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 
+from file_info_reader import get_file_stats, get_creation_time_from_file_stats, convert_timestamp_to_readable
+
+
 def split_audio(file_path, min_silence_len=500, silence_thresh=-40, chunk_length=10000, output_dir="output"):
     # 파일 확장자에 따라 AudioSegment 로드
     audio = AudioSegment.from_file(file_path)
@@ -19,7 +22,6 @@ def split_audio(file_path, min_silence_len=500, silence_thresh=-40, chunk_length
     # 출력 디렉토리 생성
     os.makedirs(output_dir, exist_ok=True)
     
-    chunk_start = 0
     part_number = 1
     current_chunk = AudioSegment.empty()
 
@@ -41,4 +43,11 @@ def split_audio(file_path, min_silence_len=500, silence_thresh=-40, chunk_length
 # 스크립트 실행 예시
 if __name__ == "__main__":
     file_path = "discord.mp3"  # 입력 파일 경로
-    split_audio(file_path)
+    
+    file_stats = get_file_stats(file_path)
+    creation_time = get_creation_time_from_file_stats(file_stats)
+    readable_creation_time = convert_timestamp_to_readable(creation_time)
+    ctime = readable_creation_time.replace(" ", "_").replace(":", "-")
+    
+    output_dir = os.path.join("output", ctime)
+    split_audio(file_path, output_dir=output_dir)

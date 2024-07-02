@@ -6,6 +6,7 @@ clovastudioguide
 url_to_filename_map.json
 test*
 *.txt
+*.mp3
 
 # secret keys
 secrets.yaml

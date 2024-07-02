@@ -23,10 +23,14 @@ faiss_store_name = "./FAISS_INDEXES"
 
 
 def make_faiss_index(path: str | Path):
-    split_docs = TextLoader(path, encoding='utf-8').load_and_split(character_splitter)
-    new_db = FAISS.from_documents(split_docs, embeddings)
-    new_db.save_local(faiss_store_name)
+    try:
+        # 기존 FAISS 인덱스를 로드 후 새 문서 추가
+        db = load_faiss_index(f"{faiss_store_name}.index")
+        add_documents_to_faiss_index(db, split_docs)
+    except FileNotFoundError:
+        db = FAISS.from_documents(split_docs, embeddings)
 
+    db.save_local(faiss_store_name)
 
 def faiss_inference(query: str, k: int = 1) -> list[str]:
     db = FAISS.load_local(faiss_store_name, embeddings, allow_dangerous_deserialization=True)

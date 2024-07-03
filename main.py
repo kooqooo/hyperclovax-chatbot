@@ -7,11 +7,10 @@ from pathlib import Path
 import faiss, json, requests
 from langchain.vectorstores import FAISS
 from langchain.embeddings import HuggingFaceEmbeddings
-from langchain_community.document_loaders import TextLoader
 from langchain_core.documents import Document
 
-from vectordb_manager import faiss_inference, init_faiss_index, add_documents_to_faiss_index, get_current_time, show_faiss_index
-from text_splitters import character_splitter
+from vectordb_manager import faiss_inference, init_faiss_index, add_documents_to_faiss_index, get_current_time, show_faiss_index, delete_faiss_index
+from text_splitters import character_splitter, get_split_docs
 from chat_completions_with_rag import rag_main
 
 app = FastAPI()
@@ -26,6 +25,10 @@ async def startup_event():
 async def read_root():
     return {"Hello": "World"}
 
+@app.delete("/initalization")
+async def read_root():
+    init_faiss_index()
+    return {"Init": "Complete"}
 
 @app.get("/answer")
 async def get_anawer(query: str):
@@ -36,9 +39,12 @@ async def get_anawer(query: str):
 
 @app.delete("/document") # delete
 # 아직 미완성. 이 함수는 구현 예정입니다.
-async def delete_document(doc_id: int):
+async def delete_document(doc_id: Optional[int] = Header(...)):
+    
+    print('doc_id:', doc_id)
+    
     try: 
-        init_faiss_index()
+        delete_faiss_index(doc_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return {"status": "success", "detail": "Document deleted"}
@@ -51,14 +57,19 @@ async def add_meeting_data(data: Annotated[str | None, Header()] = None):
     try:
         data = json.loads(data)
         data_path = data.get("data_path"); title = data.get("title"); created_date = data.get("created_date")
-
+        print('data_path:', data_path, 'title:', title, 'created_date:', created_date)
         '''
         mongoDB_id = save_to_mongoDB(page_content, title, created_date)   # 몽고디비 저장 로직 진행 -> vectordb_manager.py에서 구현?
         '''
         mongoDB_id = 1  # 임시로 설정
         data['doc_id'] = mongoDB_id
         
+        print('여기 봄data : ', data)
+        
         split_docs = get_split_docs(data_path, mongoDB_id)
+        
+        print("split_docs: ", split_docs)
+        
         add_documents_to_faiss_index(split_docs)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 

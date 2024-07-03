@@ -9,6 +9,7 @@ from langchain.text_splitter import (CharacterTextSplitter,
                                      TokenTextSplitter,
                                      SentenceTransformersTokenTextSplitter,)
 from transformers import BertTokenizerFast
+from langchain_community.document_loaders import TextLoader
 # from langchain_experimental.text_splitter import SemanticChunker
 # from langchain_openai.embeddings import OpenAIEmbeddings
 

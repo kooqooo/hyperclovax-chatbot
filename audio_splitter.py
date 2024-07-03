@@ -1,5 +1,7 @@
 import os
+import io
 
+from fastapi import UploadFile
 from tqdm import tqdm
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
@@ -39,6 +41,45 @@ def split_audio(file_path, min_silence_len=500, silence_thresh=-40, chunk_length
         current_chunk.export(chunk_filename, format="mp3")
 
     print(f"파일이 {part_number}개의 부분으로 분할되었습니다. 출력 디렉토리: {output_dir}")
+
+
+async def asplit_audio(file: UploadFile, min_silence_len=500, silence_thresh=-40, chunk_length=10000):
+    # 업로드된 파일을 메모리에서 로드
+    audio_data = await file.read()
+    audio = AudioSegment.from_file(io.BytesIO(audio_data))
+    
+    # 음성 파일을 지정된 길이와 침묵 구간을 기준으로 분할
+    chunks = split_on_silence(
+        audio,
+        min_silence_len=min_silence_len,
+        silence_thresh=silence_thresh,
+        keep_silence=200  # 침묵 구간을 잘라낼 때 약간의 침묵을 유지
+    )
+    
+    split_audio_files = []
+    part_number = 1
+    current_chunk = AudioSegment.empty()
+
+    for chunk in tqdm(chunks):
+        current_chunk += chunk
+        if len(current_chunk) >= chunk_length:
+            chunk_io = io.BytesIO()
+            current_chunk.export(chunk_io, format="mp3")
+            chunk_io.seek(0)
+            split_audio_files.append(chunk_io)
+            part_number += 1
+            current_chunk = AudioSegment.empty()
+
+    # 마지막 남은 조각 저장
+    if len(current_chunk) > 0:
+        chunk_io = io.BytesIO()
+        current_chunk.export(chunk_io, format="mp3")
+        chunk_io.seek(0)
+        split_audio_files.append(chunk_io)
+
+    print(f"파일이 {part_number}개의 부분으로 분할되었습니다.")
+    return split_audio_files
+
 
 # 스크립트 실행 예시
 if __name__ == "__main__":

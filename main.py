@@ -39,12 +39,12 @@ async def get_anawer(query: str):
 
 @app.delete("/document") # delete
 # 아직 미완성. 이 함수는 구현 예정입니다.
-async def delete_document(doc_id: Optional[int] = Header(...)):
+async def delete_document(doc_id: Annotated[str | None, Header()] = None):
     
     print('doc_id:', doc_id)
     
     try: 
-        delete_faiss_index(doc_id)
+        delete_faiss_index(str(doc_id))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return {"status": "success", "detail": "Document deleted"}
@@ -62,13 +62,11 @@ async def add_meeting_data(data: Annotated[str | None, Header()] = None):
         mongoDB_id = save_to_mongoDB(page_content, title, created_date)   # 몽고디비 저장 로직 진행 -> vectordb_manager.py에서 구현?
         '''
         mongoDB_id = 1  # 임시로 설정
-        data['doc_id'] = mongoDB_id
+        data['doc_id'] = str(mongoDB_id)
         
-        print('여기 봄data : ', data)
         
         split_docs = get_split_docs(data_path, mongoDB_id)
         
-        print("split_docs: ", split_docs)
         
         add_documents_to_faiss_index(split_docs)
     except Exception as e:

@@ -24,15 +24,10 @@ def get_current_time():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def add_documents_to_faiss_index(new_documents: list[Document]):
-    print('들어옴')
     db = load_faiss_index(faiss_store_name)
-    print('gdgd')
     new_db = FAISS.from_documents(new_documents, embeddings)
-    print('gdgd')
     db.merge_from(new_db)
-    print('gdgd')
     db.save_local(faiss_store_name)
-    print("완료?")
 
 def faiss_inference(query: str, k: int = 1) -> list[str]:
     db = load_faiss_index(faiss_store_name)
@@ -60,15 +55,15 @@ def init_faiss_index():
 def delete_faiss_index(doc_id):
     
     '구현 중입니다. 이 함수는 아직 미완성입니다.'
+    db = load_faiss_index(faiss_store_name)
+    del_docs = db.similarity_search_with_score("foo", filter=dict(doc_id=str(doc_id)), k=db.index.ntotal)
+    print('del_docs:', del_docs)
     
-    del_target = db.similarity_search_with_score("foo", filter=dict(doc_id=doc_id))
+    print(db.index_to_docstore_id.items())
     
-    print("del_target:", del_target)
-    
-    # tmp_doc = [Document(page_content="Start", metadata=dict(id=-1))]
-    # db = FAISS.from_documents(tmp_doc, embeddings)
-    # db.delete([db.index_to_docstore_id[0]])
-    # db.save_local(faiss_store_name)
+    for i in range(len(del_docs)):
+        db.delete(del_docs.index_to_docstore_id[i])
+    db.save_local(faiss_store_name)
 
 def show_faiss_index():
     db = load_faiss_index(faiss_store_name)
@@ -126,7 +121,6 @@ def main():
 
 
     db = FAISS.load_local(faiss_store_name, embeddings, allow_dangerous_deserialization=True)
-    print(help(db.delete))
 
     # # TextLoader의 load_and_split 메소드를 사용하는 방식
     # split_docs = TextLoader(data_path, encoding='utf-8').load_and_split(character_splitter) # 파이썬 위키백과 문서

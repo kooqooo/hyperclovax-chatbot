@@ -7,6 +7,8 @@ from langchain_community.vectorstores.faiss import FAISS
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_huggingface.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain_core.vectorstores import VectorStoreRetriever
+from langchain_community.docstore.in_memory import InMemoryDocstore
+from faiss.swigfaiss_avx2 import IndexFlat
 
 from text_splitters import character_splitter
 
@@ -36,6 +38,22 @@ def faiss_inference(query: str, k: int = 1) -> list[str]:
 def get_retriever() -> VectorStoreRetriever:
     db = FAISS.load_local(faiss_store_name, embeddings, allow_dangerous_deserialization=True)
     return db.as_retriever()
+
+def init_faiss():
+    faiss = FAISS(
+        embedding_function=embeddings,
+        index=IndexFlat(),
+        index_to_docstore_id={},
+        docstore=InMemoryDocstore()
+    )
+    return faiss
+
+def load_faiss_index(path=faiss_store_name, embeddings=embeddings):
+    return FAISS.load_local(path, embeddings, allow_dangerous_deserialization=True)
+
+def retrieve(query: str, k: int = 1):
+    db = load_faiss_index(faiss_store_name)
+    return list(db.similarity_search(query, k=k)[x].page_content for x in range(k))
 
 
 def main():
@@ -95,5 +113,6 @@ def main():
     print(retriever_result)
 
 
+    
 if __name__ == "__main__":
     main()

@@ -35,9 +35,9 @@ def put_document(data_path, title: str = get_current_time(), created_date: str =
     
     return response.json()
 
-def delete_document(doc_id: Optional[int]):
+def delete_document(doc_id):
     url = server_url + 'document'
-    headers = {'doc_id': str(doc_id)}
+    headers = {"Content-Type": "application/json", "doc_id": str(doc_id)}
     response = requests.delete(url, headers=headers)
     return response
 
@@ -53,4 +53,4 @@ if __name__ == "__main__":
     put_document(data_path="./wiki_python.txt")
     
     # DELETE test
-    delete_document(1)
+    delete_document('1')

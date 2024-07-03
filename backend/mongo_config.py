@@ -1,7 +1,4 @@
 import os
-from pymongo import MongoClient
-from motor.motor_asyncio import AsyncIOMotorClient
-from gridfs import GridFSBucket
 from dotenv import load_dotenv
 
 # 환경 변수로부터 MongoDB 설정 읽기

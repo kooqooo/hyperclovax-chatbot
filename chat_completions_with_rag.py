@@ -18,14 +18,14 @@ def chat_with_rag(query: str, executor: CompletionExecutor, k: int = 1) -> str:
     
     return parse_response(result)
 
-def rag_main(query='파이썬을 어디에서 관리하는가?'):
+def rag_main(query: str, k: int =1):
     load_dotenv()
     API_KEY = os.getenv("API_KEY")
     API_KEY_PRIMARY_VAL = os.getenv("API_KEY_PRIMARY_VAL")
     REQUEST_ID = os.getenv("REQUEST_ID")
     TEST_APP_ID = os.getenv("TEST_APP_ID")
     
-    result = chat_with_rag(query, CompletionExecutor(API_KEY, API_KEY_PRIMARY_VAL, REQUEST_ID, TEST_APP_ID), 3)
+    result = chat_with_rag(query, CompletionExecutor(API_KEY, API_KEY_PRIMARY_VAL, REQUEST_ID, TEST_APP_ID), k)
     print(result)
     
     return result

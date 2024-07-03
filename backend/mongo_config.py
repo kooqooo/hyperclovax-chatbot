@@ -1,14 +1,15 @@
 import os
 from pymongo import MongoClient
+from motor.motor_asyncio import AsyncIOMotorClient
 from gridfs import GridFSBucket
+from dotenv import load_dotenv
 
 # 환경 변수로부터 MongoDB 설정 읽기
+load_dotenv()
 username = os.getenv("MONGO_USERNAME", "admin")
 password = os.getenv("MONGO_PASSWORD", "password")
 
-# MongoDB connection URL
-MONGO_URL = f"mongodb://{username}:{password}@localhost:27017/"
-client = MongoClient(MONGO_URL)
-database = client["database"]
-collection = database["meetings"]
-fs_bucket = GridFSBucket(database)
+# MongoDB connection URI
+MONGO_URI = f"mongodb://{username}:{password}@localhost:27017/"
+DATABASE_NAME = "database"
+COLLECTION_NAME = "meetings"

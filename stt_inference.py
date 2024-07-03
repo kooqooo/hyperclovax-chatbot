@@ -1,5 +1,8 @@
 import os
+import io
+
 from transformers import WhisperForConditionalGeneration, WhisperProcessor
+from fastapi import UploadFile
 import torchaudio
 import torch
 from tqdm import tqdm
@@ -43,6 +46,36 @@ def transcribe_audio_files_in_directory(directory_path, model_name="maxseats/Sun
                     process_file(audio_path)
 
     process_directory(directory_path)
+
+def transcribe_audio(file_io: io.BytesIO, model_name="maxseats/SungBeom-whisper-small-ko-set9"):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
+    processor = WhisperProcessor.from_pretrained(model_name)
+    model = WhisperForConditionalGeneration.from_pretrained(model_name).to(device)
+    model.eval()
+
+    def process_file(file_io: io.BytesIO):
+        # Byte 데이터를 waveform으로 변환
+        waveform, sample_rate = torchaudio.load(file_io)
+        
+        # 필요한 경우 샘플링 레이트를 16kHz로 변환합니다.
+        if sample_rate != 16000:
+            transform = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)
+            waveform = transform(waveform)
+        
+        # 오디오 파일을 Whisper 입력 형식으로 변환합니다.
+        input_features = processor(waveform.squeeze().numpy(), sampling_rate=16000, return_tensors="pt").input_features.to(device)
+        
+        # 모델을 사용하여 추론합니다.
+        with torch.no_grad():
+            predicted_ids = model.generate(input_features)
+            transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
+        
+        return transcription
+
+    transcription = process_file(file_io)
+    return transcription
+
 
 if __name__ == "__main__":
     directory_path = "output"

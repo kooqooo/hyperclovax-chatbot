@@ -1,10 +1,10 @@
 """ Author: @maxseats
-ㅁㄴㅇㄹAPI 문서는 아래를 참고하세요.
-ㅁㄴㅇㄹhttps://api.ncloud-docs.com/docs/clovastudio-chatcompletions
+서버에게 RAG 질의응답, FAISS CRUD 요청을 보내는 코드입니다.
 
-
-[API 요청 실험]
-
+[API 요청]
+DB 초기화, RAG 질의응답, 회의록 PUT, 회의록 DELETE 순으로 요청을 보내는 코드에요.
+각 과정에 show_faiss_index()를 통해 DB의 상태를 확인할 수 있어요.
+필요에 따라 추후에 mongoDB와 연동하여 데이터를 저장하거나 삭제하는 로직을 추가할 수 있어요.
 """
 import requests
 import urllib.parse

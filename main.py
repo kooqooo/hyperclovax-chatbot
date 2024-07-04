@@ -1,15 +1,15 @@
 import os
 import sys
 from datetime import datetime
+from uuid import uuid4
 
 from dotenv import load_dotenv
 import torch
+from tqdm import tqdm
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 import uvicorn
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 
 from backend.meetings import router as meeting_router
@@ -21,6 +21,8 @@ from audio_splitter import asplit_audio
 
 
 load_dotenv()
+PATH = os.path.dirname(os.path.abspath(__file__))
+audio_files_dirname = "audio_files"
 model_name = os.getenv("MODEL_NAME")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 processor = WhisperProcessor.from_pretrained(model_name)
@@ -42,39 +44,27 @@ def read_root():
     return {"Hello": "World"}
 
 
-@app.post("/")
+@app.post("/files")
 async def upload_file(file: UploadFile = File(...)):
+    # GridFS에 파일 업로드
     client = AsyncIOMotorClient(MONGO_URI)
     db = client[DATABASE_NAME]
-    collection = db[COLLECTION_NAME]
     bucket = AsyncIOMotorGridFSBucket(db)
-    # GridFS에 파일 업로드
+    
     file_id = await upload_to_gridfs(file, bucket)
     client.close()
-    return JSONResponse(status_code=200, content={"file_id": str(file_id)})
+    await file.seek(0)
     
-    try:
-        # 오디오 파일 분할
-        split_files = await asplit_audio(file)
-        
-        # STT
-        transcriptions = []
-        for split_file in split_files: # 로컬에 저장된 파일을 읽는게 더 빠름, 파일 하나마다 모델을 불러오는 듯?
-            transcription = await atranscribe_audio_with_model(split_file, model, processor, device) # 비동기로 변경할 필요가 있음
-            transcriptions.append(transcription)
-        
-        # 회의 정보 저장
-        meeting = Meeting(
-            title=file.filename,
-            audio_file_id=str(file_id), ####### <- 이 부분이 문제가 될 가능성이 있음
-            transcript="\n\n".join(transcriptions)
-        )
-        await collection.insert_one(meeting.model_dump())
-        return JSONResponse(status_code=200, content={"file_id": str(file_id)})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        client.close()
+    # 로컬에 임시 저장
+    uuid = uuid4().hex
+    uuid_path = os.path.join(PATH, audio_files_dirname, uuid)
+    print("uuid_path:", uuid_path)
+    os.makedirs(uuid_path, exist_ok=True)
+    with open(os.path.join(uuid_path, file.filename), "wb") as f:
+        f.write(await file.read())
+    
+    return JSONResponse(status_code=200, content={"file_id": str(file_id), "uuid": uuid})
+
 
 if __name__ == "__main__":
     # private_ip = get_private_ip()

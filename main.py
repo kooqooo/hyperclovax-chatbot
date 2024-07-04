@@ -38,16 +38,14 @@ async def get_anawer(query: str):
     return {"result": result}
 
 @app.delete("/document") # delete
-# 아직 미완성. 이 함수는 구현 예정입니다.
 async def delete_document(doc_id: Annotated[str | None, Header(convert_underscores=False)] = None):    
-    print('doc_id:', doc_id)
     if doc_id is None:
         raise HTTPException(status_code=400, detail="doc_id header not found")  
     try: 
         delete_faiss_index(doc_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    return {"status": "success", "detail": "Document deleted"}
+    return RedirectResponse(url="/success", status_code=303)
 
 @app.put("/document") # add
 async def add_meeting_data(data: Annotated[str | None, Header()] = None):

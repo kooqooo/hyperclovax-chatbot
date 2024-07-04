@@ -52,19 +52,24 @@ def init_faiss_index():
     db.delete([db.index_to_docstore_id[0]])
     db.save_local(faiss_store_name)
 
-def delete_faiss_index(doc_id):
-    
-    '구현 중입니다. 이 함수는 아직 미완성입니다.'
-    db = load_faiss_index(faiss_store_name)
-    del_docs = db.similarity_search_with_score("foo", filter=dict(doc_id=str(doc_id)), k=db.index.ntotal)
-    print('del_docs:', del_docs)
-    
-    print(db.index_to_docstore_id.items())
-    
-    for i in range(len(del_docs)):
-        db.delete(del_docs.index_to_docstore_id[i])
-    db.save_local(faiss_store_name)
+# doc_id가 맞는 document의 ID를 추출하는 함수
+def get_ids_by_doc_id(db_dict, target_doc_id):
+    result_ids = []
+    for doc_id, doc_info in db_dict.items():
+        if doc_info.metadata['doc_id'] == target_doc_id:
+            result_ids.append(doc_id)
+    return result_ids
 
+def delete_faiss_index(doc_id):
+    try:
+        db = load_faiss_index(faiss_store_name)
+        del_docs = db.similarity_search_with_score("foo", filter=dict(doc_id=int(doc_id)), k=db.index.ntotal)
+        result_ids = get_ids_by_doc_id(db.docstore._dict, int(doc_id))
+        db.delete(result_ids)
+        db.save_local(faiss_store_name)
+    except Exception as e:
+        raise Exception(f"Error: {e}")
+    
 def show_faiss_index():
     db = load_faiss_index(faiss_store_name)
     print(db.docstore._dict, '\n\n')

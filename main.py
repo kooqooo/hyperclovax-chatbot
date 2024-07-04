@@ -66,7 +66,7 @@ async def upload_file(file: UploadFile = File(...)):
     
     return JSONResponse(status_code=200, content={"file_id": str(file_id), "uuid": uuid})
 
-@app.get("/split/{uuid}")
+@app.post("/segment/{uuid}")
 async def segment_audio(uuid: str):
     uuid_path = os.path.join(audio_files_path, uuid)
     if not os.path.exists(uuid_path):

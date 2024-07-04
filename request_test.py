@@ -42,10 +42,10 @@ def delete_document(doc_id):
     return response
 
 if __name__ == "__main__":
-    # query = "파이썬을 어디에서 관리하는가?"
-    # query = "출처가 어디인가?"
-    # result = get_answer(query).json()
-    # print(result)
+    query = "파이썬을 어디에서 관리하는가?"
+    query = "출처가 어디인가?"
+    result = get_answer(query).json()
+    print(result)
 
     # PUT test
     put_document("./wiki_python.txt", "Maxseats Test", "2023-07-02 12:34:56")

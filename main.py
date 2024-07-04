@@ -16,7 +16,7 @@ from backend.meetings import router as meeting_router
 from backend.meetings import Attendee, Meeting
 from backend.mongo_config import *
 from backend.ip_addresses import get_public_ip, get_private_ip
-from stt_inference import transcribe_audio, atranscribe_audio, atranscribe_audio_with_model
+from stt_inference import transcribe_audio_files_in_directory_with_model, transcribe_audio, atranscribe_audio_with_model
 from audio_splitter import split_audio
 
 
@@ -24,10 +24,10 @@ load_dotenv()
 PATH = os.path.dirname(os.path.abspath(__file__))
 audio_files_path = os.path.join(PATH, "audio_files")
 
-# model_name = os.getenv("MODEL_NAME")
-# device = "cuda" if torch.cuda.is_available() else "cpu"
-# processor = WhisperProcessor.from_pretrained(model_name)
-# model = WhisperForConditionalGeneration.from_pretrained(model_name).to(device)
+model_name = os.getenv("MODEL_NAME")
+device = "cuda" if torch.cuda.is_available() else "cpu"
+processor = WhisperProcessor.from_pretrained(model_name)
+model = WhisperForConditionalGeneration.from_pretrained(model_name).to(device)
 
 async def upload_to_gridfs(file: UploadFile, bucket: AsyncIOMotorGridFSBucket) -> str:
     grid_in = bucket.open_upload_stream(file.filename)
@@ -77,6 +77,24 @@ async def segment_audio(uuid: str):
     try:
         num_files = split_audio(file_path, output_dir=output_dir)
         return JSONResponse(status_code=200, content={"num_files": num_files})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/stt/{uuid}")
+async def stt(uuid: str):
+    uuid_path = os.path.join(audio_files_path, uuid)
+    if not os.path.exists(uuid_path):
+        raise HTTPException(status_code=404, detail="UUID not found")
+    file_path = os.path.join(uuid_path, "outputs")
+    try:
+        transcriptions = transcribe_audio_files_in_directory_with_model(
+            file_path,
+            model=model,
+            processor=processor,
+            device=device
+        )
+        transcriptions = "\n\n".join(transcriptions)
+        return JSONResponse(status_code=200, content={"transcript": transcriptions})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

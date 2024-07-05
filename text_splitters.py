@@ -9,6 +9,7 @@ from langchain.text_splitter import (CharacterTextSplitter,
                                      TokenTextSplitter,
                                      SentenceTransformersTokenTextSplitter,)
 from transformers import BertTokenizerFast
+from langchain_community.document_loaders import TextLoader
 # from langchain_experimental.text_splitter import SemanticChunker
 # from langchain_openai.embeddings import OpenAIEmbeddings
 
@@ -56,6 +57,11 @@ hf_token_splitter = CharacterTextSplitter.from_huggingface_tokenizer(
 
 sentece_transformers_token_splitter = SentenceTransformersTokenTextSplitter(chunk_overlap=0)
 
+def get_split_docs(data_path, doc_id):
+    split_docs = TextLoader(data_path, encoding='utf-8').load_and_split(character_splitter)
+    for idx, split_doc in enumerate(split_docs):
+        split_docs[idx].metadata['doc_id'] = doc_id
+    return split_docs
 
 def main():
     # 예제 텍스트

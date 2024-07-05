@@ -39,10 +39,10 @@ async def get_anawer(query: str):
     return {"result": result}
 
 @app.delete("/document") # delete
-async def delete_document(doc_id: Annotated[str | None, Header(convert_underscores=False)] = None):    
+async def delete_document(doc_id: Annotated[str | None, Header(convert_underscores=False)] = None):
     if doc_id is None:
         raise HTTPException(status_code=400, detail="doc_id header not found")  
-    try: 
+    try:
         delete_faiss_index(doc_id)
         # delete_mongoDB_Data(doc_id) # 몽고디비에서도 삭제를 해야 합니다.
     except Exception as e:
@@ -60,8 +60,8 @@ async def add_meeting_data(data: Annotated[str | None, Header()] = None):
         
         # mongoDB_id = save_to_mongoDB(page_content, title, created_date)   # 몽고디비 저장 로직 진행 -> vectordb_manager.py에서 구현?
         # 임시로 설정(mongoDB의 회의록 id)
-        mongoDB_id = 1
-        data['doc_id'] = str(mongoDB_id)
+        mongoDB_id = '1'
+        data['doc_id'] = mongoDB_id
         
         add_documents_to_faiss_index(get_split_docs(data_path, mongoDB_id))
     except Exception as e:

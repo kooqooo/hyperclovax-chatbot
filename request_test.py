@@ -38,9 +38,9 @@ def put_document(data_path, title: str = get_current_time(), created_date: str =
     # 응답 확인
     return response.json()
 
-def delete_document(doc_id):
+def delete_document(doc_id: str):
     url = server_url + 'document'
-    headers = {"Content-Type": "application/json", "doc_id": str(doc_id)}
+    headers = {"Content-Type": "application/json", "doc_id": doc_id}
     response = requests.delete(url, headers=headers)
     return response.json()
 
@@ -57,9 +57,9 @@ if __name__ == "__main__":
     print('1: '); show_faiss_index(); print()
     
     # RAG 질의응답 request
-    query = "파이썬은 어디에서 관리하는가?"
+    query = "파이썬을 어디에서 관리하는가?"
     result = get_answer(query)
-    print(result)
+    print(result, '\n')
 
     '''
     회의록 데이터 PUT request (DB에 저장)
@@ -74,4 +74,4 @@ if __name__ == "__main__":
     # 회의록 DELETE test
     # doc_id를 참조해서 Delete를 수행합니다.
     delete_document('1')
-    print('3: '); show_faiss_index(); print()
+    print('1: '); show_faiss_index(); print()

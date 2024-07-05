@@ -51,16 +51,17 @@ def init_faiss_index():
 # doc_id가 맞는 document의 ID를 추출하는 함수
 def get_ids_by_doc_id(db_dict, target_doc_id):
     result_ids = []
-    for doc_id, doc_info in db_dict.items():
-        if doc_info.metadata['doc_id'] == target_doc_id:
-            result_ids.append(doc_id)
+    for id, doc_info in db_dict.items():
+        if str(doc_info.metadata['doc_id']) == str(target_doc_id):
+            result_ids.append(id)
     return result_ids
 
 def delete_faiss_index(doc_id):
     try:
         db = load_faiss_index(faiss_store_name)
-        del_docs = db.similarity_search_with_score("foo", filter=dict(doc_id=int(doc_id)), k=db.index.ntotal)
-        result_ids = get_ids_by_doc_id(db.docstore._dict, int(doc_id))
+        result_ids = get_ids_by_doc_id(db.docstore._dict, doc_id)
+        if(len(result_ids)==0):
+            return
         db.delete(result_ids)
         db.save_local(faiss_store_name)
     except Exception as e:

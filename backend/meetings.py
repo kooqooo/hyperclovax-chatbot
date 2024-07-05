@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pymongo import ReturnDocument, errors
 from motor.motor_asyncio import AsyncIOMotorClient
 import pytz
+import requests
 
 from backend.mongo_config import *
 
@@ -119,3 +120,20 @@ async def delete_meeting(meeting_id: str):
         raise HTTPException(status_code=500, detail="Failed to delete meeting")
     finally:
         client.close()
+
+
+def upload_meeting(audio_file_id: str, faiss_file_id: str = None):
+    seoul_now = datetime.now(tz=pytz.timezone('Asia/Seoul'))
+    seoul_now_str = seoul_now.strftime("%Y-%m-%d %H:%M:%S")
+
+    meeting = Meeting(
+        title=seoul_now_str,
+        transcript="진짜 긴내용\n\n",
+        audio_file_id=audio_file_id,
+        faiss_file_id=faiss_file_id if faiss_file_id else audio_file_id, # 이 부분은 Merge 이후 수정
+        created_at=seoul_now,
+    )
+    
+    request_data = meeting.model_dump_json()
+    result = requests.post("http://localhost:8000/meetings/", data=request_data)
+    return result.json()

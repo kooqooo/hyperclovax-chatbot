@@ -1,18 +1,22 @@
 import os
-import sys
+from typing import List, Optional, Annotated
 from datetime import datetime
 from uuid import uuid4
+import json
 
-from dotenv import load_dotenv
 from bson.objectid import ObjectId
+from dotenv import load_dotenv
 import torch
 from tqdm import tqdm
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
-import uvicorn
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
+from fastapi import FastAPI, File, UploadFile, HTTPException, Header
+from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
+import uvicorn
 
+from vectordb_manager import faiss_inference, init_and_save_faiss_index, add_documents_to_faiss_index, get_current_time, show_faiss_index, delete_faiss_index
+from text_splitters import character_splitter, get_split_docs
+from chat_completions_with_rag import main as rag_main
 from backend.meetings import router as meeting_router
 from backend.meetings import Attendee, Meeting
 from backend.mongo_config import *
@@ -40,11 +44,64 @@ async def upload_to_gridfs(file: UploadFile, bucket: AsyncIOMotorGridFSBucket) -
 app = FastAPI()
 app.include_router(meeting_router, prefix="/meetings", tags=["meetings"])
 
+@app.on_event("startup")
+async def startup_event():
+    print("Server is starting up...")   # 시작 시 설정 있으면 구현 예정
     
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
 
+@app.delete("/initalization")
+async def read_root():
+    init_and_save_faiss_index()
+    # init_mongoDB()    # 필요 시 구현 예정입니다.
+    return {"Init": "Complete"}
+
+@app.get("/success")
+async def success():
+    return {"status": "success", "detail": "방금 했던 요청 성공"}
+
+@app.get("/faissdb")
+async def show_data():
+    return show_faiss_index()
+
+@app.get("/answer")
+async def get_anawer(query: str):
+    if query is None:
+        raise HTTPException(status_code=400, detail="Query header not found")
+    result = rag_main(query, 5)  # k개의 문서를 검색합니다.
+    return {"result": result}
+
+@app.put("/document") # add
+async def add_meeting_data(data: Annotated[str | None, Header()] = None):
+
+    if data is None:
+        raise HTTPException(status_code=400, detail="Data header not found")
+    try:
+        data = json.loads(data)
+        data_path = data.get("data_path"); title = data.get("title"); created_date = data.get("created_date")
+        
+        # mongoDB_id = save_to_mongoDB(page_content, title, created_date)   # 몽고디비 저장 로직 진행 -> vectordb_manager.py에서 구현?
+        # 임시로 설정(mongoDB의 회의록 id)
+        mongoDB_id = '1'
+        data['doc_id'] = mongoDB_id
+        
+        add_documents_to_faiss_index(get_split_docs(data_path, mongoDB_id))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) 
+    return RedirectResponse(url="/success", status_code=303)
+
+@app.delete("/document") # delete
+async def delete_document(doc_id: Annotated[str | None, Header(convert_underscores=False)] = None):
+    if doc_id is None:
+        raise HTTPException(status_code=400, detail="doc_id header not found")  
+    try:
+        delete_faiss_index(doc_id)
+        # delete_mongoDB_Data(doc_id) # 몽고디비에서도 삭제를 해야 합니다.
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return RedirectResponse(url="/success", status_code=303)
 
 @app.post("/files")
 async def upload_file(file: UploadFile = File(...)):

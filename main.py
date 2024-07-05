@@ -4,12 +4,13 @@ from datetime import datetime
 from uuid import uuid4
 
 from dotenv import load_dotenv
+from bson.objectid import ObjectId
 import torch
 from tqdm import tqdm
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 import uvicorn
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 
 from backend.meetings import router as meeting_router
@@ -98,7 +99,38 @@ async def stt(uuid: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/files/{file_id}")
+async def download_file(file_id: str):
+    client = AsyncIOMotorClient(MONGO_URI)
+    db = client[DATABASE_NAME]
+    bucket = AsyncIOMotorGridFSBucket(db)
+    
+    try:
+        file_id = ObjectId(file_id) 
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    try:
+        grid_out = await bucket.open_download_stream(file_id)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    finally:
+        client.close()
+    
+    async def file_iterator():
+        while True:
+            chunk = await grid_out.readchunk()
+            if not chunk:
+                break
+            yield chunk
+
+    headers = {
+        'Content-Disposition': f'attachment; filename="{grid_out.filename}"'
+    }
+
+    return StreamingResponse(file_iterator(), media_type='application/octet-stream', headers=headers)
+    
 
 if __name__ == "__main__":
     # private_ip = get_private_ip()
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

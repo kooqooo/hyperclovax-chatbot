@@ -1,6 +1,6 @@
 from data_loader import load_data
-from retrieval import RetrievalModel
-from reader import ReaderModel
+from src.retrieval import RetrievalModel
+from src.reader import ReaderModel
 from config import DATA_DIR, READER_MODEL_NAME, EMBEDDING_MODEL_NAME, TOP_K_RETRIEVE, QUERY
 import yaml
 import os

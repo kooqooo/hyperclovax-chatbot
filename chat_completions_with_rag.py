@@ -18,7 +18,7 @@ def chat_with_rag(query: str, executor: CompletionExecutor, k: int = 1) -> str:
     
     return parse_response(result)
 
-def rag_main(query: str, k: int =1):
+def main(query: str, k: int =1):
     load_dotenv(override=True)
     API_KEY = os.getenv("API_KEY")
     API_KEY_PRIMARY_VAL = os.getenv("API_KEY_PRIMARY_VAL")
@@ -31,4 +31,4 @@ def rag_main(query: str, k: int =1):
     return result
 
 if __name__ == "__main__":
-    rag_main()
+    main()

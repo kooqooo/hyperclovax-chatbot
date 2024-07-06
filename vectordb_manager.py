@@ -25,8 +25,6 @@ embeddings = HuggingFaceEmbeddings(
 )
 faiss_store_name = "./FAISS_INDEXES"
 
-def get_current_time():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def add_documents_to_faiss_index(new_documents: list[Document]):
     db = load_faiss_index(faiss_store_name)

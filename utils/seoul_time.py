@@ -2,6 +2,9 @@ from datetime import datetime
 import pytz
 
 
+def get_current_time_str():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 def str_to_datetime(timestamp_str: str) -> datetime:
     """주어진 타임스탬프 문자열을 datetime 객체로 변환"""
     return datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")

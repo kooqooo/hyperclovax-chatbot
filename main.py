@@ -14,11 +14,10 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Header
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
 import uvicorn
 
-from vectordb_manager import faiss_inference, init_and_save_faiss_index, add_documents_to_faiss_index, get_current_time, show_faiss_index, delete_faiss_index
+from vectordb_manager import init_and_save_faiss_index, add_documents_to_faiss_index, show_faiss_index, delete_faiss_index
 from text_splitters import character_splitter, get_split_docs
 from rag import main as rag_main
 from backend.meetings import router as meeting_router
-from backend.meetings import Attendee, Meeting
 from backend.mongo_config import *
 from stt_inference import transcribe_audio_files_in_directory_with_model
 from audio_splitter import split_audio

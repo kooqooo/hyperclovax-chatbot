@@ -6,7 +6,7 @@ from tqdm import tqdm
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 
-from file_info_reader import get_file_stats, get_creation_time_from_file_stats, convert_timestamp_to_readable
+from utils.file_info_reader import get_file_stats, get_creation_time_from_file_stats, convert_timestamp_to_readable
 
 
 def split_audio(file_path, min_silence_len=500, silence_thresh=-40, chunk_length=10000, output_dir="output"):

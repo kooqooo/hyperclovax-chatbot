@@ -20,7 +20,7 @@ from rag import main as rag_main
 from backend.meetings import router as meeting_router
 from backend.meetings import Attendee, Meeting
 from backend.mongo_config import *
-from stt_inference import transcribe_audio_files_in_directory_with_model, transcribe_audio, atranscribe_audio_with_model
+from stt_inference import transcribe_audio_files_in_directory_with_model
 from audio_splitter import split_audio
 
 

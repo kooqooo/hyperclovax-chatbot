@@ -1,4 +1,4 @@
-from chat_completions import CompletionExecutor, RequestData, parse_response
+from src.chat_completions import CompletionExecutor, RequestData, parse_response
 from vectordb_manager import faiss_inference
 from prompt_template import Prompts
 import os

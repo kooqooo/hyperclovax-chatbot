@@ -1,6 +1,6 @@
 from src.chat_completions import CompletionExecutor, RequestData, parse_response
 from vectordb_manager import faiss_inference
-from prompt_template import Prompts
+from src.prompt_template import Prompts
 import os
 from dotenv import load_dotenv
 

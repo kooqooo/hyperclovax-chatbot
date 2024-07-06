@@ -1,16 +1,12 @@
-from src.chat_completions import CompletionExecutor, RequestData, parse_response
-from vectordb_manager import faiss_inference
-from src.prompt_template import Prompts
 import os
+
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
-API_KEY = os.getenv("API_KEY")
-API_KEY_PRIMARY_VAL = os.getenv("API_KEY_PRIMARY_VAL")
-REQUEST_ID = os.getenv("REQUEST_ID")
-TEST_APP_ID = os.getenv("TEST_APP_ID")
+from src.chat_completions import CompletionExecutor, RequestData, parse_response
+from src.prompt_template import Prompts
+from vectordb_manager import faiss_inference
+from config import executor
 
-executor = CompletionExecutor(API_KEY, API_KEY_PRIMARY_VAL, REQUEST_ID, TEST_APP_ID)
 
 def chat_with_rag(query: str, executor: CompletionExecutor = executor, k: int = 1) -> str:
     retrieval_result = faiss_inference(query, k)

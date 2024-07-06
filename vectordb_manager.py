@@ -13,6 +13,7 @@ from langchain_community.document_loaders.text import TextLoader
 from faiss.swigfaiss_avx2 import IndexFlat
 
 from text_splitters import character_splitter
+from utils.seoul_time import get_current_time_str 
 
 # Global variables
 model_name = "jhgan/ko-sroberta-multitask"
@@ -97,7 +98,7 @@ def show_faiss_index():
     
     return db.docstore._dict
 
-def save_to_mongoDB(data, title=get_current_time(), created_date=get_current_time()) -> int:
+def save_to_mongoDB(data, title=get_current_time_str(), created_date=get_current_time_str()) -> int:
     '''
     코드:
         mongoDB에 회의록 데이터 저장

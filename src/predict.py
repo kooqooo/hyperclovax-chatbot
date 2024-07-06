@@ -1,9 +1,21 @@
-from data_loader import load_data
 from src.retrieval import RetrievalModel
 from src.reader import ReaderModel
 from config import DATA_DIR, READER_MODEL_NAME, EMBEDDING_MODEL_NAME, TOP_K_RETRIEVE, QUERY
 import yaml
 import os
+
+def load_data(data_dir):
+    documents = []
+
+    for filename in os.listdir(data_dir):
+        if filename.endswith(".txt"):
+            with open(os.path.join(data_dir, filename), 'r', encoding='utf-8') as file:
+                content = file.read()
+                # 문장 단위로 나누기
+                sentences = content.split('.')
+                documents.extend([sentence.strip() for sentence in sentences if sentence.strip()])
+
+    return documents
 
 def main():
     path = os.getcwd()

@@ -14,6 +14,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Header
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
 import uvicorn
 
+from config import *
 from vectordb_manager import init_and_save_faiss_index, add_documents_to_faiss_index, show_faiss_index, delete_faiss_index
 from text_splitters import character_splitter, get_split_docs
 from rag import main as rag_main
@@ -23,14 +24,8 @@ from stt_inference import transcribe_audio_files_in_directory_with_model
 from audio_splitter import split_audio
 
 
-load_dotenv()
 PATH = os.path.dirname(os.path.abspath(__file__))
 audio_files_path = os.path.join(PATH, "audio_files")
-
-model_name = os.getenv("MODEL_NAME")
-device = "cuda" if torch.cuda.is_available() else "cpu"
-processor = WhisperProcessor.from_pretrained(model_name)
-model = WhisperForConditionalGeneration.from_pretrained(model_name).to(device)
 
 async def upload_to_gridfs(file: UploadFile, bucket: AsyncIOMotorGridFSBucket) -> str:
     grid_in = bucket.open_upload_stream(file.filename)
@@ -145,9 +140,9 @@ async def stt(uuid: str):
     try:
         transcriptions = transcribe_audio_files_in_directory_with_model(
             file_path,
-            model=model,
-            processor=processor,
-            device=device
+            model=STT_MODEL,
+            processor=PROCESSOR,
+            device=DEVICE
         )
         transcriptions = "\n\n".join(transcriptions)
         return JSONResponse(status_code=200, content={"transcript": transcriptions})

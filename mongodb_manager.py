@@ -22,7 +22,6 @@ class Attendee(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = None
 
-
 class Meeting(BaseModel):
     title: Optional[str] = ''
     # date: datetime # 회의 날짜 # 였는데 업로드된 파일의 메타데이터를 읽어오는 것이 어려움
@@ -33,9 +32,6 @@ class Meeting(BaseModel):
     # faiss_vector: Optional[List[float]] = None  # Faiss에 저장된 벡터
     created_at: datetime = Field(default_factory=lambda: datetime.now(tz=pytz.timezone('Asia/Seoul'))) # DB에 저장 기준 시간
     # updated_at: datetime = Field(default_factory=datetime.now)
-
-
-
 
 def create_meeting(meeting: Meeting):
     try:

@@ -10,7 +10,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import pytz
 import requests
 
-from backend.mongo_config import *
+from config import *
 
 from typing import Any, List, Optional
 from pydantic import BaseModel, Field
@@ -121,7 +121,7 @@ async def delete_meeting(meeting_id: str):
     finally:
         client.close()
 
-
+# 테스트용 함수, 요청 예시
 def upload_meeting(audio_file_id: str, faiss_file_id: str = None):
     seoul_now = datetime.now(tz=pytz.timezone('Asia/Seoul'))
     seoul_now_str = seoul_now.strftime("%Y-%m-%d %H:%M:%S")

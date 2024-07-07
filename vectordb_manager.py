@@ -10,9 +10,10 @@ from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_core.documents import Document
 from langchain_community.document_loaders.text import TextLoader
-from faiss.swigfaiss_avx2 import IndexFlat
+# from faiss.swigfaiss_avx2 import IndexFlat
 
 from text_splitters import character_splitter
+from utils.seoul_time import get_current_time_str 
 
 # Global variables
 model_name = "jhgan/ko-sroberta-multitask"
@@ -25,8 +26,6 @@ embeddings = HuggingFaceEmbeddings(
 )
 faiss_store_name = "./FAISS_INDEXES"
 
-def get_current_time():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def add_documents_to_faiss_index(new_documents: list[Document]):
     db = load_faiss_index(faiss_store_name)
@@ -44,14 +43,14 @@ def get_retriever() -> VectorStoreRetriever:
     db = load_faiss_index(faiss_store_name)
     return db.as_retriever()
 
-def init_faiss():
-    faiss = FAISS(
-        embedding_function=embeddings,
-        index=IndexFlat(),
-        index_to_docstore_id={},
-        docstore=InMemoryDocstore()
-    )
-    return faiss
+# def init_faiss():
+#     faiss = FAISS(
+#         embedding_function=embeddings,
+#         index=IndexFlat(),
+#         index_to_docstore_id={},
+#         docstore=InMemoryDocstore()
+#     )
+#     return faiss
 
 def load_faiss_index(
     path: str = faiss_store_name,
@@ -99,7 +98,7 @@ def show_faiss_index():
     
     return db.docstore._dict
 
-def save_to_mongoDB(data, title=get_current_time(), created_date=get_current_time()) -> int:
+def save_to_mongoDB(data, title=get_current_time_str(), created_date=get_current_time_str()) -> int:
     '''
     코드:
         mongoDB에 회의록 데이터 저장

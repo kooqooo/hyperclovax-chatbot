@@ -7,14 +7,7 @@ import io
 # 서버 URL
 server_url = "http://127.0.0.1:8000/"
 
-# 오디오 파일을 저장할 디렉토리 설정
-UPLOAD_DIR = "./"
-
-# 디렉토리가 없으면 생성
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
-
-def get_stt(audio):
+def post_file(audio):
     url = server_url + 'files'
     original_filename = os.path.basename(audio)
     
@@ -26,7 +19,7 @@ def get_stt(audio):
 
 # Gradio 인터페이스 생성
 iface = gr.Interface(
-    fn=get_stt,
+    fn=post_file,
     inputs=gr.Audio(type="filepath"),
     outputs="text",
     title="Audio File Uploader",

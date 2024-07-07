@@ -22,7 +22,7 @@ from backend.meetings import router as meeting_router
 from backend.mongo_config import *
 from stt_inference import transcribe_audio_files_in_directory_with_model
 from audio_splitter import split_audio
-
+from mongodb_manager import save_to_mongoDB, delete_mongoDB_data
 
 PATH = os.path.dirname(os.path.abspath(__file__))
 audio_files_path = os.path.join(PATH, "audio_files")
@@ -75,9 +75,7 @@ async def add_meeting_data(data: Annotated[str | None, Header()] = None):
         data = json.loads(data)
         data_path = data.get("data_path"); title = data.get("title"); created_date = data.get("created_date")
         
-        # mongoDB_id = save_to_mongoDB(page_content, title, created_date)   # 몽고디비 저장 로직 진행 -> vectordb_manager.py에서 구현?
-        # 임시로 설정(mongoDB의 회의록 id)
-        mongoDB_id = '1'
+        mongoDB_id = save_to_mongoDB(page_content, title, created_date)
         data['doc_id'] = mongoDB_id
         
         add_documents_to_faiss_index(get_split_docs(data_path, mongoDB_id))
@@ -91,7 +89,7 @@ async def delete_document(doc_id: Annotated[str | None, Header(convert_underscor
         raise HTTPException(status_code=400, detail="doc_id header not found")  
     try:
         delete_faiss_index(doc_id)
-        # delete_mongoDB_Data(doc_id) # 몽고디비에서도 삭제를 해야 합니다.
+        delete_mongoDB_data(doc_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return RedirectResponse(url="/success", status_code=303)

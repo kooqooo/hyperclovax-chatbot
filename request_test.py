@@ -18,7 +18,7 @@ from vectordb_manager import show_faiss_index
 server_url = "http://127.0.0.1:8000/"
 
 def get_current_time():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now(tz=pytz.timezone('Asia/Seoul')).strftime("%Y-%m-%d %H:%M:%S")
 
 def get_answer(query: str) -> str:
     url = server_url + 'answer'

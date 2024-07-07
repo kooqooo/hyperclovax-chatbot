@@ -10,7 +10,7 @@ from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_core.documents import Document
 from langchain_community.document_loaders.text import TextLoader
-# from faiss.swigfaiss_avx2 import IndexFlat
+from faiss import IndexFlat
 
 from text_splitters import character_splitter
 from utils.seoul_time import get_current_time_str 
@@ -43,14 +43,14 @@ def get_retriever() -> VectorStoreRetriever:
     db = load_faiss_index(faiss_store_name)
     return db.as_retriever()
 
-# def init_faiss():
-#     faiss = FAISS(
-#         embedding_function=embeddings,
-#         index=IndexFlat(),
-#         index_to_docstore_id={},
-#         docstore=InMemoryDocstore()
-#     )
-#     return faiss
+def init_faiss():
+    faiss = FAISS(
+        embedding_function=embeddings,
+        index=IndexFlat(0),
+        docstore=InMemoryDocstore(),
+        index_to_docstore_id={}
+    )
+    return faiss
 
 def load_faiss_index(
     path: str = faiss_store_name,

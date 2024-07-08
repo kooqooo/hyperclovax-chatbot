@@ -1,30 +1,32 @@
 import os
-from typing import List, Optional, Annotated
-from datetime import datetime
+from typing import Annotated
 from uuid import uuid4
 import json
 
 from bson.objectid import ObjectId
-from dotenv import load_dotenv
-import torch
-from tqdm import tqdm
-from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
 from fastapi import FastAPI, File, UploadFile, HTTPException, Header
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
 import uvicorn
 
 from config import *
-from vectordb_manager import init_and_save_faiss_index, add_documents_to_faiss_index, show_faiss_index, delete_faiss_index
 from text_splitters import character_splitter, get_split_docs
 from rag import main as rag_main
 from backend.meetings import router as meeting_router
 from backend.mongo_config import *
 from stt_inference import transcribe_audio_files_in_directory_with_model
 from audio_splitter import split_audio
+from vectordb_manager import (
+    load_faiss_index,
+    save_faiss_index,
+    create_faiss_index_from_documents,
+    init_and_save_faiss_index,
+    show_faiss_index,
+    delete_faiss_index, 
+    create_documents_from_texts,
+    put_metadata_to_documents,
+)
 
-
-PATH = os.path.dirname(os.path.abspath(__file__))
 audio_files_path = os.path.join(PATH, "audio_files")
 
 async def upload_to_gridfs(file: UploadFile, bucket: AsyncIOMotorGridFSBucket) -> str:
@@ -66,26 +68,38 @@ async def get_anawer(query: str):
     result = rag_main(query, 5)  # k개의 문서를 검색합니다.
     return {"result": result}
 
-@app.put("/document") # add
+@app.put("/documents") # init or merge FAISS index
 async def add_meeting_data(data: Annotated[str | None, Header()] = None):
 
     if data is None:
         raise HTTPException(status_code=400, detail="Data header not found")
     try:
         data = json.loads(data)
-        data_path = data.get("data_path"); title = data.get("title"); created_date = data.get("created_date")
+        transcript = data.get("transcript")
+        time = data.get("time") # <class 'str'>
+        meeting_id = data.get("meeting_id")
+
+        faiss = load_faiss_index()
+
+        transcripts = character_splitter.split_text(transcript)
+        documents = create_documents_from_texts(transcripts)
+        metadata = {"time": time, "meeting_id": meeting_id}
+        documents = put_metadata_to_documents(documents, metadata)
+        new_faiss = create_faiss_index_from_documents(documents)
+
+        if faiss.index.ntotal > 0:
+            new_faiss.merge_from(faiss)
+
+        try:
+            save_faiss_index(new_faiss)
+        except Exception as e:
+            print("Error:", e)
         
-        # mongoDB_id = save_to_mongoDB(page_content, title, created_date)   # 몽고디비 저장 로직 진행 -> vectordb_manager.py에서 구현?
-        # 임시로 설정(mongoDB의 회의록 id)
-        mongoDB_id = '1'
-        data['doc_id'] = mongoDB_id
-        
-        add_documents_to_faiss_index(get_split_docs(data_path, mongoDB_id))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
     return RedirectResponse(url="/success", status_code=303)
 
-@app.delete("/document") # delete
+@app.delete("/documents") # delete
 async def delete_document(doc_id: Annotated[str | None, Header(convert_underscores=False)] = None):
     if doc_id is None:
         raise HTTPException(status_code=400, detail="doc_id header not found")  
@@ -110,7 +124,6 @@ async def upload_file(file: UploadFile = File(...)):
     # 로컬에 임시 저장
     uuid = uuid4().hex
     uuid_path = os.path.join(audio_files_path, uuid)
-    print("uuid_path:", uuid_path)
     os.makedirs(uuid_path, exist_ok=True)
     with open(os.path.join(uuid_path, file.filename), "wb") as f:
         f.write(await file.read())
@@ -182,5 +195,4 @@ async def download_file(file_id: str):
     
 
 if __name__ == "__main__":
-    # private_ip = get_private_ip()
     uvicorn.run(app, host="0.0.0.0", port=8000)

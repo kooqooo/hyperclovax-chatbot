@@ -100,7 +100,7 @@ async def add_meeting_data(data: Annotated[str | None, Header()] = None):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
-    return {"status": "success", "detail": "방금 했던 요청 성공"}
+    return {"file_id": uuid, "detail": "Upload Success"}
 
 def delete_local_data(doc_id, audio_files_path):
     try:
@@ -193,12 +193,12 @@ async def process_all(file: UploadFile = File(...)):
         headers = {"Content-Type": "application/json", "data": json.dumps(data)}       
         async with httpx.AsyncClient() as client:
             response = await client.put("http://127.0.0.1:8000/document", headers=headers) #, headers=json.dumps(headers))
-        return {"response": response.json()}
 
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=str(e)) 
-    return RedirectResponse(url="/success", status_code=303)
+    return {"response": response.json()}
+    # return RedirectResponse(url="/success", status_code=303)
 
 @app.post("/files")
 async def upload_file(file: UploadFile = File(...)):

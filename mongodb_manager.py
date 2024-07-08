@@ -33,13 +33,13 @@ class Meeting(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(tz=pytz.timezone('Asia/Seoul'))) # DB에 저장 기준 시간
     # updated_at: datetime = Field(default_factory=datetime.now)
 
-def create_meeting(meeting: Meeting):
+async def create_meeting(meeting: Meeting):
     try:
         client = AsyncIOMotorClient(MONGO_URI)
         db = client[DATABASE_NAME]
         collection = db[COLLECTION_NAME]
-        result = collection.insert_one(meeting.model_dump())
-        created_meeting = collection.find_one({"_id": result.inserted_id})
+        result = await collection.insert_one(meeting.model_dump())
+        created_meeting = await collection.find_one({"_id": result.inserted_id})
         return Meeting(**created_meeting)
     except errors.PyMongoError as e:
         logging.error(f"Failed to create meeting: {e}")
@@ -48,8 +48,10 @@ def create_meeting(meeting: Meeting):
         client.close()
 
 
-def save_to_mongoDB(page_content, title=get_current_time_str(), created_date=get_current_time_str()):
-    uuid = uuid4().hex
+async def save_to_mongoDB(uuid, page_content, title=get_current_time_str(), created_date=get_current_time_str()):
+    
+    print('meeting 만들기 직전')
+    
     meeting = Meeting(
         title=title,
         transcript=page_content,
@@ -57,16 +59,16 @@ def save_to_mongoDB(page_content, title=get_current_time_str(), created_date=get
         faiss_file_id=uuid,
         created_at=created_date,
     )
-    create_meeting(meeting)
-    return uuid
+    print('객체 생성')
+    await create_meeting(meeting)
+    return
 
-
-def delete_mongoDB_data(doc_id: str):
+async def delete_mongoDB_data(doc_id: str):
     try:
         client = AsyncIOMotorClient(MONGO_URI)
         db = client[DATABASE_NAME]
         collection = db[COLLECTION_NAME]
-        deleted_meeting = collection.find_one_and_delete({"_id": ObjectId(doc_id)})
+        deleted_meeting = await collection.find_one_and_delete({"_id": ObjectId(doc_id)})
         if deleted_meeting:
             return Meeting(**deleted_meeting)
         else:

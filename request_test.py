@@ -11,7 +11,8 @@ import urllib.parse
 from typing import List, Optional
 import json
 from datetime import datetime
-
+import pytz
+import os
 from vectordb_manager import show_faiss_index
 
 # 서버 URL
@@ -50,28 +51,56 @@ def delete_initialization():
     return response.json()
 
 
+def put_document_v2(uuid, txt_path, title: str=None, created_date: str = get_current_time()):
+    url = server_url + 'document'
+    
+    if title is None:
+        title = os.path.basename(txt_path)
+    
+    # 요청에 필요한 데이터
+    data = {"uuid": uuid, "txt_path": txt_path, "title": title, "created_date": created_date}
+    
+    # 요청 보내기
+    headers = {"Content-Type": "application/json", "data": json.dumps(data)}
+    response = requests.put(url, headers=headers)
+
+    # 응답 확인
+    return response.json()
+
+
+
 if __name__ == "__main__":
     
     # DB 초기화
     delete_initialization()
     print('1: '); show_faiss_index(); print()
     
-    # RAG 질의응답 request
-    query = "파이썬을 어디에서 관리하는가?"
-    result = get_answer(query)
-    print(result, '\n')
+    # # RAG 질의응답 request
+    # query = "파이썬을 어디에서 관리하는가?"
+    # result = get_answer(query)
+    # print(result, '\n')
 
     '''
     회의록 데이터 PUT request (DB에 저장)
     회의록 txt파일 경로, title, created_date를 입력해줍니다.
     title, created_date : 미 입력시 현재 시간으로 지정됩니다.
     '''
-    put_document(data_path="./wiki_python.txt", title="Maxseats Test", created_date="2023-07-02 12:34:56")
-    put_document(data_path="./wiki_python.txt", title="Maxseats Test")
-    put_document(data_path="./wiki_python.txt")
+    # put_document(data_path="./wiki_python.txt", title="Maxseats Test", created_date="2023-07-02 12:34:56")
+    # put_document(data_path="./wiki_python.txt", title="Maxseats Test")
+    # put_document(data_path="./wiki_python.txt")
+    
+    
+    uuid='1fa5e656641b4a78b1a9bc57b7d40243'
+    path_by_uuid = f"/mnt/a/maxseats-hyperclovax-chatbot/audio_files/{uuid}/멘토링8주차_녹음.txt"
+
+    # (uuid, txt_path, title: str = get_current_time(), created_date: str = get_current_time()):
+    put_document_v2(uuid='1fa5e656641b4a78b1a9bc57b7d40243', txt_path=path_by_uuid, created_date="2023-07-02 12:34:56")
+    # put_document_v2(data_path="./wiki_python.txt", title="Maxseats Test")
+    # put_document_v2(data_path="./wiki_python.txt")
+
     print('2: '); show_faiss_index(); print()
     
     # 회의록 DELETE test
     # doc_id를 참조해서 Delete를 수행합니다.
-    delete_document('1')
-    print('1: '); show_faiss_index(); print()
+    delete_document('1fa5e656641b4a78b1a9bc57b7d40243')
+    print('3: '); show_faiss_index(); print()

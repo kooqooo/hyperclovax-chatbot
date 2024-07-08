@@ -1,3 +1,7 @@
+"""Author: @maxseats
+mongoDB와 연동하여 데이터를 삽입/삭제/조회/초기화하는 로직을 이곳에 모아서 추가했어요.
+main.py와 request_test.py에서 사용해요.
+"""
 from bson import ObjectId
 import logging
 import os

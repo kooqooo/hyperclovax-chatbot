@@ -79,9 +79,6 @@ async def get_anawer(query: str):
     result = rag_main(query, 5)  # k개의 문서를 검색합니다.
     return {"result": result}
 
-
-
-
 @app.put("/document") # add
 async def add_meeting_data(data: Annotated[str | None, Header()] = None):
 

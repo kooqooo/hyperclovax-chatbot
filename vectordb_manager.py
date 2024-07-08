@@ -24,24 +24,8 @@ embeddings = HuggingFaceEmbeddings(
     model_kwargs=model_kwargs,
     encode_kwargs=encode_kwargs
 )
-faiss_store_name = "./FAISS_INDEXES"
+faiss_store_name = "FAISS_INDEXES"
 
-
-def add_documents_to_faiss_index(new_documents: list[Document]):
-    db = load_faiss_index(faiss_store_name)
-    new_db = FAISS.from_documents(new_documents, embeddings)
-    db.merge_from(new_db)
-    db.save_local(faiss_store_name)
-
-def faiss_inference(query: str, k: int = 1) -> list[str]:
-    db = load_faiss_index(faiss_store_name)
-    if db.index.ntotal < k:   # OutOfIndex 방지를 위한 k 설정
-        k = db.index.ntotal
-    return list(db.similarity_search(query, k=k)[x].page_content for x in range(k))
-
-def get_retriever() -> VectorStoreRetriever:
-    db = load_faiss_index(faiss_store_name)
-    return db.as_retriever()
 
 def init_faiss():
     faiss = FAISS(
@@ -52,21 +36,52 @@ def init_faiss():
     )
     return faiss
 
-def load_faiss_index(
-    path: str = faiss_store_name,
-    embeddings: HuggingFaceEmbeddings = embeddings
-) -> FAISS:
-    return FAISS.load_local(path, embeddings, allow_dangerous_deserialization=True)
-
-def retrieve(query: str, k: int = 1):
-    db = load_faiss_index(faiss_store_name)
-    return list(db.similarity_search(query, k=k)[x].page_content for x in range(k))
-
 def init_and_save_faiss_index():
     tmp_doc = [Document(page_content="Start", metadata=dict(id=-1))]
     db = FAISS.from_documents(tmp_doc, embeddings)
     db.delete([db.index_to_docstore_id[0]])
     db.save_local(faiss_store_name)
+
+def create_documents_from_texts(texts: list[str]) -> list[Document]:
+    return [Document(page_content=text) for text in texts]
+
+def create_faiss_index_from_documents(documents: list[Document]):
+    faiss = FAISS.from_documents(documents, embeddings)
+    return faiss
+
+def put_metadata_to_documents(documents: list[Document], metadata: dict):
+    for doc in documents:
+        doc.metadata.update(metadata)
+    return documents
+
+def add_documents_to_faiss_index(new_documents: list[Document]):
+    db = load_faiss_index(faiss_store_name)
+    new_db = FAISS.from_documents(new_documents, embeddings)
+    db.merge_from(new_db)
+    db.save_local(faiss_store_name)
+
+def load_faiss_index(
+    path: str = faiss_store_name,
+    embeddings: HuggingFaceEmbeddings = embeddings
+) -> FAISS:
+    try:
+        db = FAISS.load_local(path, embeddings, allow_dangerous_deserialization=True)
+    except:
+        db = init_faiss()
+    return db
+
+def merge_faiss_index(db1: FAISS, db2: FAISS) -> FAISS:
+    db1.merge_from(db2)
+    return db1
+
+def save_faiss_index(faiss: FAISS, path: str = faiss_store_name):
+    faiss.save_local(path)
+    
+def faiss_inference(query: str, k: int = 1) -> list[str]:
+    db = load_faiss_index(faiss_store_name)
+    if db.index.ntotal < k:   # OutOfIndex 방지를 위한 k 설정
+        k = db.index.ntotal
+    return list(db.similarity_search(query, k=k)[x].page_content for x in range(k))
 
 # doc_id가 맞는 document의 ID를 추출하는 함수
 def get_ids_by_doc_id(db_dict, target_doc_id):
@@ -98,13 +113,14 @@ def show_faiss_index():
     
     return db.docstore._dict
 
-def save_to_mongoDB(data, title=get_current_time_str(), created_date=get_current_time_str()) -> int:
-    '''
-    코드:
-        mongoDB에 회의록 데이터 저장
-    return:
-        저장된 회의록 데이터의 id
-    '''
+def get_retriever() -> VectorStoreRetriever:
+    db = load_faiss_index(faiss_store_name)
+    return db.as_retriever()
+
+def retrieve(query: str, k: int = 1):
+    db = load_faiss_index(faiss_store_name)
+    return list(db.similarity_search(query, k=k)[x].page_content for x in range(k))
+
 
 def main():
 
@@ -185,3 +201,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+    init_and_save_faiss_index()  # faiss index 초기화

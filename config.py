@@ -6,6 +6,7 @@ from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
 from src.chat_completions import CompletionExecutor
 
+PATH = os.path.dirname(os.path.abspath(__file__))
 
 load_dotenv(override=True)
 

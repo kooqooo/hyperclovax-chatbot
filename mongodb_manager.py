@@ -3,6 +3,8 @@ import logging
 import os
 from typing import List, Optional
 from datetime import datetime
+import json
+from bson.json_util import dumps
 
 from fastapi import APIRouter, HTTPException
 from pymongo import ReturnDocument, errors
@@ -68,13 +70,46 @@ async def delete_mongoDB_data(doc_id: str):
         client = AsyncIOMotorClient(MONGO_URI)
         db = client[DATABASE_NAME]
         collection = db[COLLECTION_NAME]
-        deleted_meeting = await collection.find_one_and_delete({"_id": ObjectId(doc_id)})
+        deleted_meeting = await collection.find_one_and_delete({"audio_file_id": doc_id})
         if deleted_meeting:
             return Meeting(**deleted_meeting)
         else:
+            return None
             raise HTTPException(status_code=404, detail="Meeting not found")
     except errors.PyMongoError as e:
         logging.error(f"Failed to delete meeting: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete meeting")
+    finally:
+        client.close()
+
+async def init_mongoDB():
+    try:
+        client = AsyncIOMotorClient(MONGO_URI)
+        db = client[DATABASE_NAME]
+        collection = db[COLLECTION_NAME]
+        result = await collection.delete_many({})
+        if result.deleted_count > 0:
+            return {"status": "success", "deleted_count": result.deleted_count}
+        else:
+            return None
+    except errors.PyMongoError as e:
+        logging.error(f"Failed to delete all documents: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete all documents")
+    finally:
+        client.close()
+        
+async def show_mongoDB_data():
+    try:
+        client = AsyncIOMotorClient(MONGO_URI)
+        db = client[DATABASE_NAME]
+        collection = db[COLLECTION_NAME]
+        cursor = collection.find({})
+        documents = await cursor.to_list(length=None)  # 모든 문서를 리스트로 변환
+        result = json.loads(dumps(documents))
+        print(result)
+        return {"documents": result}
+    except errors.PyMongoError as e:
+        logging.error(f"Failed to retrieve documents: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve documents")
     finally:
         client.close()

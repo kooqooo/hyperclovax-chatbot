@@ -7,13 +7,15 @@ DB 초기화, RAG 질의응답, 회의록 PUT, 회의록 DELETE 순으로 요청
 필요에 따라 추후에 mongoDB와 연동하여 데이터를 저장하거나 삭제하는 로직을 추가할 수 있어요.
 """
 import requests
-import urllib.parse
-from typing import List, Optional
+# import urllib.parse
+# from typing import List, Optional
 import json
 from datetime import datetime
 import pytz
 import os
 from vectordb_manager import show_faiss_index
+from mongodb_manager import show_mongoDB_data
+from pprint import pprint
 
 # 서버 URL
 server_url = "http://127.0.0.1:8000/"
@@ -67,13 +69,26 @@ def put_document_v2(uuid, txt_path, title: str=None, created_date: str = get_cur
     # 응답 확인
     return response.json()
 
+def get_showdb():
+    url = server_url + 'showdb'
+    response = requests.get(url)
+    # print(response.json())
+    
+    data = response.json()
+    faiss_data = data.get("FAISS")
+    mongodb_data = data.get("MongoDB")
+    
+    pprint(faiss_data)
+    print()
+    pprint(mongodb_data)
+    return faiss_data, mongodb_data
 
 
 if __name__ == "__main__":
     
-    # DB 초기화
-    delete_initialization()
-    print('1: '); show_faiss_index(); print()
+    # # DB 초기화
+    # delete_initialization()
+    # print('1: '); show_faiss_index(); print()
     
     # # RAG 질의응답 request
     # query = "파이썬을 어디에서 관리하는가?"
@@ -90,17 +105,18 @@ if __name__ == "__main__":
     # put_document(data_path="./wiki_python.txt")
     
     
-    uuid='1fa5e656641b4a78b1a9bc57b7d40243'
-    path_by_uuid = f"/mnt/a/maxseats-hyperclovax-chatbot/audio_files/{uuid}/멘토링8주차_녹음.txt"
+    # uuid='1fa5e656641b4a78b1a9bc57b7d40243'
+    # path_by_uuid = f"/mnt/a/maxseats-hyperclovax-chatbot/audio_files/{uuid}/멘토링8주차_녹음.txt"
 
     # (uuid, txt_path, title: str = get_current_time(), created_date: str = get_current_time()):
-    put_document_v2(uuid='1fa5e656641b4a78b1a9bc57b7d40243', txt_path=path_by_uuid, created_date="2023-07-02 12:34:56")
+    # put_document_v2(uuid='1fa5e656641b4a78b1a9bc57b7d40243', txt_path=path_by_uuid, created_date="2023-07-02 12:34:56")
     # put_document_v2(data_path="./wiki_python.txt", title="Maxseats Test")
     # put_document_v2(data_path="./wiki_python.txt")
 
-    print('2: '); show_faiss_index(); print()
+
+    print('2: '); get_showdb(); print()
     
     # 회의록 DELETE test
     # doc_id를 참조해서 Delete를 수행합니다.
-    delete_document('1fa5e656641b4a78b1a9bc57b7d40243')
-    print('3: '); show_faiss_index(); print()
+    delete_document('45cf02db2e6c449f9a564aa45fc74389')
+    print('3: '); get_showdb(); print()

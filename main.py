@@ -3,6 +3,7 @@ from typing import List, Optional, Annotated
 from datetime import datetime
 from uuid import uuid4
 import json
+import httpx
 
 from bson.objectid import ObjectId
 from dotenv import load_dotenv
@@ -10,7 +11,7 @@ import torch
 from tqdm import tqdm
 from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
-from fastapi import FastAPI, File, UploadFile, HTTPException, Header
+from fastapi import FastAPI, File, UploadFile, HTTPException, Header, Response
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
 import uvicorn
 import shutil
@@ -24,7 +25,7 @@ from backend.meetings import router as meeting_router
 from backend.mongo_config import *
 from stt_inference import transcribe_audio_files_in_directory_with_model
 from audio_splitter import split_audio
-from mongodb_manager import save_to_mongoDB, delete_mongoDB_data
+from mongodb_manager import save_to_mongoDB, delete_mongoDB_data, init_mongoDB, show_mongoDB_data
 from utils.seoul_time import get_current_time_str
 
 PATH = os.path.dirname(os.path.abspath(__file__))
@@ -48,19 +49,28 @@ async def startup_event():
 def read_root():
     return {"Hello": "World"}
 
-@app.delete("/initalization")
+def init_local_data():
+    try:
+        shutil.rmtree(audio_files_path)
+    except FileNotFoundError:
+        print(f"The directory {audio_files_path} does not exist.")
+    os.makedirs(audio_files_path, exist_ok=True)
+
+@app.delete("/initialization")
 async def read_root():
     init_and_save_faiss_index()
-    # init_mongoDB()    # 필요 시 구현 예정입니다.
+    await init_mongoDB()
+    init_local_data()
     return {"Init": "Complete"}
 
 @app.get("/success")
 async def success():
     return {"status": "success", "detail": "방금 했던 요청 성공"}
 
-@app.get("/faissdb")
+@app.get("/showdb")
 async def show_data():
-    return show_faiss_index()
+    result = {"data":  {"FAISS": show_faiss_index(), "MongoDB": await show_mongoDB_data() } }
+    return result
 
 @app.get("/answer")
 async def get_anawer(query: str):
@@ -75,14 +85,9 @@ async def get_anawer(query: str):
 @app.put("/document") # add
 async def add_meeting_data(data: Annotated[str | None, Header()] = None):
 
-    if data is None:
-        raise HTTPException(status_code=400, detail="Data header not found")
     try:
         data = json.loads(data)
-        # data_path = data.get("data_path"); title = data.get("title"); created_date = data.get("created_date")
         uuid = data.get("uuid"); title = data.get("title"); created_date = data.get("created_date"); txt_path = data.get("txt_path")
-        
-        
         page_content=''
         try:
             with open(txt_path, 'r', encoding='utf-8') as file:
@@ -90,34 +95,18 @@ async def add_meeting_data(data: Annotated[str | None, Header()] = None):
         except FileNotFoundError:
             print(f"The file {txt_path} does not exist.")
 
-        
-        print('save mongodb 직전')
-        # await save_to_mongoDB(uuid, page_content, title, created_date)
-        
-        print('faiss 직전')
+        await save_to_mongoDB(uuid, page_content, title, created_date)
         add_documents_to_faiss_index(get_split_docs(txt_path, uuid))
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail=str(e)) 
-    return RedirectResponse(url="/success", status_code=303)
+        raise HTTPException(status_code=500, detail=str(e))
+    return {"status": "success", "detail": "방금 했던 요청 성공"}
 
-    # if data is None:
-    #     raise HTTPException(status_code=400, detail="Data header not found")
-    # try:
-    #     data = json.loads(data)
-    #     data_path = data.get("data_path"); title = data.get("title"); created_date = data.get("created_date")
-        
-    #     mongoDB_id = save_to_mongoDB(page_content, title, created_date)
-    #     data['doc_id'] = mongoDB_id
-        
-    #     add_documents_to_faiss_index(get_split_docs(data_path, mongoDB_id))
-    # except Exception as e:
-    #     raise HTTPException(status_code=500, detail=str(e)) 
-    # return RedirectResponse(url="/success", status_code=303)    
-        
-
-
-
+def delete_local_data(doc_id, audio_files_path):
+    try:
+        shutil.rmtree(os.path.join(audio_files_path, doc_id))
+    except FileNotFoundError:
+        print(f"The directory {doc_id} does not exist.")
 
 @app.delete("/document") # delete
 async def delete_document(doc_id: Annotated[str | None, Header(convert_underscores=False)] = None):
@@ -125,12 +114,11 @@ async def delete_document(doc_id: Annotated[str | None, Header(convert_underscor
         raise HTTPException(status_code=400, detail="doc_id header not found")  
     try:
         delete_faiss_index(doc_id)
-        delete_mongoDB_data(doc_id)
+        await delete_mongoDB_data(doc_id)
+        delete_local_data(doc_id, audio_files_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return RedirectResponse(url="/success", status_code=303)
-
-    
 
 def save_audio_to_local(file: UploadFile, save_path):
     try:
@@ -147,16 +135,10 @@ def save_audio_to_local(file: UploadFile, save_path):
 
 def segment_and_STT(file_path) -> str:
     try:
-        
-        print('split 전')
-        
-        
         # Segment
         directory_path = os.path.dirname(file_path)
         num_files = split_audio(file_path, output_dir=os.path.join(directory_path, 'output'))   # mp3파일 위치, 분할된 파일 저장 폴더
-        
-        print('stt 전')
-        
+
         # STT
         transcriptions = transcribe_audio_files_in_directory_with_model(
             directory_path,
@@ -165,10 +147,7 @@ def segment_and_STT(file_path) -> str:
             device=DEVICE
         )
         transcriptions = "\n\n".join(transcriptions)
-        
-        
-        print('stt 후')
-        
+
         # 확장자를 .txt로 변경해서 회의록 저장
         base, _ = os.path.splitext(file_path)
         txt_file_path = base + '.txt'
@@ -181,25 +160,15 @@ def segment_and_STT(file_path) -> str:
         print(e)
         raise HTTPException(status_code=500, detail=str(e))   
 
-
-
-@app.post("/files")
-# async def upload_file(file_path):
-async def upload_file(file: UploadFile = File(...)):
-
+@app.post("/process")
+async def process_all(file: UploadFile = File(...)):
     '''
     유저가 mp3를 업로드
-    
     mp3 로컬에 저장
-    
     로컬에 저장한 경로를 참조해서 mp3 파일 분할
-    
     분할된 파일 STT 수행 -> 전체 회의록 텍스트 제작
-
     data_path, title, created_date 선언
-    
     이후의 로직 수행(save_to_mondoDB, add_faiss_document~)
-    
     '''
     
     try:
@@ -213,70 +182,43 @@ async def upload_file(file: UploadFile = File(...)):
         title = os.path.basename(file_path) # mp3파일 이름을 title로 지정
         created_date = get_current_time_str()
         
-        
-        
-        # 필요 변수
-        # uuid, page_content, title, created_date, txt_path
-        
         # 요청 데이터 준비
-        data = {
+        data= {
             "uuid": uuid,
             "page_content": page_content,
             "title": title,
             "created_date": created_date,
             "txt_path": txt_path
         }    
-        
-        # #url = 'http://127.0.0.1:8000/document'
-        # print('요청 보냄', data)
-        
-
-        return JSONResponse(status_code=200, content={"uuid": uuid, "page_content": page_content, "title": title, "created_date": created_date, "txt_path": txt_path})
-        # return RedirectResponse(url="/success", status_code=303)
-        
-        
-        #response = requests.put(url, data=json.dumps(data))
-        
-        # # 응답 확인
-        # if response.status_code == 200:
-        #     print("Document successfully updated")
-        # else:
-        #     print(f"Failed to update document. Status code: {response.status_code}")
-        #     print(f"Response: {response.text}")
-        #     raise HTTPException(status_code=500, detail='Bad Request to /document') 
+        headers = {"Content-Type": "application/json", "data": json.dumps(data)}       
+        async with httpx.AsyncClient() as client:
+            response = await client.put("http://127.0.0.1:8000/document", headers=headers) #, headers=json.dumps(headers))
+        return {"response": response.json()}
 
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=str(e)) 
     return RedirectResponse(url="/success", status_code=303)
 
-
-
-
-
-
-
-
-# @app.post("/files")
-# async def upload_file(file: UploadFile = File(...)):
-    # # GridFS에 파일 업로드
-    # client = AsyncIOMotorClient(MONGO_URI)
-    # db = client[DATABASE_NAME]
-    # bucket = AsyncIOMotorGridFSBucket(db)
+@app.post("/files")
+async def upload_file(file: UploadFile = File(...)):
+    # GridFS에 파일 업로드
+    client = AsyncIOMotorClient(MONGO_URI)
+    db = client[DATABASE_NAME]
+    bucket = AsyncIOMotorGridFSBucket(db)
     
-    # file_id = await upload_to_gridfs(file, bucket)
-    # client.close()
-    # await file.seek(0)
+    file_id = await upload_to_gridfs(file, bucket)
+    client.close()
+    await file.seek(0)
     
-#     # 로컬에 임시 저장
-#     uuid = uuid4().hex
-#     uuid_path = os.path.join(audio_files_path, uuid)
-#     print("uuid_path:", uuid_path)
-#     os.makedirs(uuid_path, exist_ok=True)
-#     with open(os.path.join(uuid_path, file.filename), "wb") as f:
-#         f.write(await file.read())
+    # 로컬에 임시 저장
+    uuid = uuid4().hex
+    uuid_path = os.path.join(audio_files_path, uuid)
+    os.makedirs(uuid_path, exist_ok=True)
+    with open(os.path.join(uuid_path, file.filename), "wb") as f:
+        f.write(await file.read())
     
-#     return JSONResponse(status_code=200, content={"file_id": str(file_id), "uuid": uuid})
+    return JSONResponse(status_code=200, content={"file_id": str(file_id), "uuid": uuid})
 
 @app.post("/segment/{uuid}")
 async def segment_audio(uuid: str):

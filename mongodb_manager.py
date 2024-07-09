@@ -2,42 +2,17 @@
 mongoDB와 연동하여 데이터를 삽입/삭제/조회/초기화하는 로직을 이곳에 모아서 추가했어요.
 main.py와 request_test.py에서 사용해요.
 """
-from bson import ObjectId
 import logging
-import os
-from typing import List, Optional
-from datetime import datetime
 import json
+
 from bson.json_util import dumps
-
-from fastapi import APIRouter, HTTPException
-from pymongo import ReturnDocument, errors
+from fastapi import HTTPException
+from pymongo import errors
 from motor.motor_asyncio import AsyncIOMotorClient
-import pytz
-import requests
 
+from backend.meeting_model import Meeting
 from config import *
-
-from typing import Any, List, Optional
-from pydantic import BaseModel, Field
-from uuid import uuid4
 from utils.seoul_time import get_current_time_str 
-
-class Attendee(BaseModel):
-    name: str
-    email: Optional[str] = None
-    role: Optional[str] = None
-
-class Meeting(BaseModel):
-    title: Optional[str] = ''
-    # date: datetime # 회의 날짜 # 였는데 업로드된 파일의 메타데이터를 읽어오는 것이 어려움
-    attendees: Optional[List[Attendee]] = []
-    transcript: Optional[str] = None  # 대화 내용을 저장할 필드
-    audio_file_id: Optional[str] = None  # GridFS에 저장된 음성 파일의 ID
-    faiss_file_id: Optional[str] = None  # GridFS에 저장된 Faiss 파일의 ID
-    # faiss_vector: Optional[List[float]] = None  # Faiss에 저장된 벡터
-    created_at: datetime = Field(default_factory=lambda: datetime.now(tz=pytz.timezone('Asia/Seoul'))) # DB에 저장 기준 시간
-    # updated_at: datetime = Field(default_factory=datetime.now)
 
 async def create_meeting(meeting: Meeting):
     try:

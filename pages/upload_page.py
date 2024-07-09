@@ -8,7 +8,8 @@ import io
 server_url = "http://127.0.0.1:8000/"
 
 def post_file(audio):
-    url = server_url + 'files'
+    # url = server_url + 'files'
+    url = server_url + 'process'
     original_filename = os.path.basename(audio)
     
     with open(audio, 'rb') as file:

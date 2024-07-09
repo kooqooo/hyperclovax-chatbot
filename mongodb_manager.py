@@ -29,10 +29,7 @@ async def create_meeting(meeting: Meeting):
         client.close()
 
 
-async def save_to_mongoDB(uuid, page_content, title=get_current_time_str(), created_date=get_current_time_str()):
-    
-    print('meeting 만들기 직전')
-    
+async def save_to_mongoDB(uuid, page_content, title=get_current_time_str(), created_date=get_current_time_str()):    
     meeting = Meeting(
         title=title,
         transcript=page_content,
@@ -40,7 +37,6 @@ async def save_to_mongoDB(uuid, page_content, title=get_current_time_str(), crea
         faiss_file_id=uuid,
         created_at=created_date,
     )
-    print('객체 생성')
     await create_meeting(meeting)
     return
 

@@ -78,16 +78,19 @@ def transcribe_audio_files_in_directory_with_model(
         # transcription을 리스트에 추가합니다.
         transcriptions.append(transcription)
 
+    audio_paths = []
     def process_directory(path):
         # 디렉토리 내 모든 파일과 폴더를 확인합니다.
         for root, dirs, files in os.walk(path):
             for file_name in tqdm(files, desc=f"Processing files in {root}"):
                 if file_name.endswith(".mp3") or file_name.endswith(".wav"):
-                    audio_path = os.path.join(root, file_name)
-                    process_file(audio_path)
-
+                    audio_paths.append(os.path.join(root, file_name))
+    
     process_directory(directory_path)
     
+    for audio_path in audio_paths:
+        process_file(audio_path)
+
     return transcriptions
 
 

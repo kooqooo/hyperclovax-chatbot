@@ -1,24 +1,17 @@
 import os
-from typing import List, Optional, Annotated
-from datetime import datetime
+from typing import Annotated
 from uuid import uuid4
 import json
-import httpx
 
 from bson.objectid import ObjectId
-from dotenv import load_dotenv
-import torch
-from tqdm import tqdm
-from transformers import WhisperProcessor, WhisperForConditionalGeneration
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorGridFSBucket
-from fastapi import FastAPI, File, UploadFile, HTTPException, Header, Response
+from fastapi import FastAPI, File, UploadFile, HTTPException, Header
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse
+import httpx
 import uvicorn
 import shutil
-import requests
 
 from config import *
-from vectordb_manager import init_and_save_faiss_index, add_documents_to_faiss_index, show_faiss_index, delete_faiss_index
 from text_splitters import character_splitter, get_split_docs
 from rag import main as rag_main
 from backend.meetings import router as meeting_router
@@ -27,8 +20,18 @@ from stt_inference import transcribe_audio_files_in_directory_with_model
 from audio_splitter import split_audio
 from mongodb_manager import save_to_mongoDB, delete_mongoDB_data, init_mongoDB, show_mongoDB_data
 from utils.seoul_time import get_current_time_str
+from vectordb_manager import (
+    load_faiss_index,
+    save_faiss_index,
+    create_faiss_index_from_documents,
+    init_and_save_faiss_index,
+    show_faiss_index,
+    delete_faiss_index, 
+    create_documents_from_texts,
+    put_metadata_to_documents,
+    add_documents_to_faiss_index
+)
 
-PATH = os.path.dirname(os.path.abspath(__file__))
 audio_files_path = os.path.join(PATH, "audio_files")
 
 async def upload_to_gridfs(file: UploadFile, bucket: AsyncIOMotorGridFSBucket) -> str:
@@ -79,6 +82,37 @@ async def get_anawer(query: str):
     result = rag_main(query, 5)  # k개의 문서를 검색합니다.
     return {"result": result}
 
+@app.put("/documents") # init or merge FAISS index
+async def put_meeting_data(data: Annotated[str | None, Header()] = None):
+
+    if data is None:
+        raise HTTPException(status_code=400, detail="Data header not found")
+    try:
+        data = json.loads(data)
+        transcript = data.get("transcript")
+        time = data.get("time") # <class 'str'>
+        meeting_id = data.get("meeting_id")
+
+        faiss = load_faiss_index()
+
+        transcripts = character_splitter.split_text(transcript)
+        documents = create_documents_from_texts(transcripts)
+        metadata = {"time": time, "meeting_id": meeting_id}
+        documents = put_metadata_to_documents(documents, metadata)
+        new_faiss = create_faiss_index_from_documents(documents)
+
+        if faiss.index.ntotal > 0:
+            new_faiss.merge_from(faiss)
+
+        try:
+            save_faiss_index(new_faiss)
+        except Exception as e:
+            print("Error:", e)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return RedirectResponse(url="/success", status_code=303)
+
 @app.put("/document") # add
 async def add_meeting_data(data: Annotated[str | None, Header()] = None):
 
@@ -105,7 +139,7 @@ def delete_local_data(doc_id, audio_files_path):
     except FileNotFoundError:
         print(f"The directory {doc_id} does not exist.")
 
-@app.delete("/document") # delete
+@app.delete("/documents") # delete
 async def delete_document(doc_id: Annotated[str | None, Header(convert_underscores=False)] = None):
     if doc_id is None:
         raise HTTPException(status_code=400, detail="doc_id header not found")  
@@ -148,7 +182,7 @@ def segment_and_STT(file_path) -> str:
         # 확장자를 .txt로 변경해서 회의록 저장
         base, _ = os.path.splitext(file_path)
         txt_file_path = base + '.txt'
-        with open(txt_file_path, 'w') as file:
+        with open(txt_file_path, 'w', encoding='utf-8') as file:
             file.write(transcriptions)
         
         return transcriptions, txt_file_path
@@ -178,7 +212,7 @@ async def process_all(file: UploadFile = File(...)):
         page_content, txt_path = segment_and_STT(file_path)
         title = os.path.basename(file_path) # mp3파일 이름을 title로 지정
         created_date = get_current_time_str()
-        
+        print("created_date:", created_date)
         # 요청 데이터 준비
         data= {
             "uuid": uuid,
@@ -186,7 +220,9 @@ async def process_all(file: UploadFile = File(...)):
             "title": title,
             "created_date": created_date,
             "txt_path": txt_path
-        }    
+        }
+        from pprint import pprint
+        pprint(data)
         headers = {"Content-Type": "application/json", "data": json.dumps(data)}       
         async with httpx.AsyncClient() as client:
             response = await client.put("http://127.0.0.1:8000/document", headers=headers) #, headers=json.dumps(headers))
@@ -282,5 +318,4 @@ async def download_file(file_id: str):
     
 
 if __name__ == "__main__":
-    # private_ip = get_private_ip()
     uvicorn.run(app, host="0.0.0.0", port=8000)

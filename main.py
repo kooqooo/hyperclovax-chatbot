@@ -167,12 +167,12 @@ def save_audio_to_local(file: UploadFile, save_path):
 def segment_and_STT(file_path) -> str:
     try:
         # Segment
-        directory_path = os.path.dirname(file_path)
-        num_files = split_audio(file_path, output_dir=os.path.join(directory_path, 'output'))   # mp3파일 위치, 분할된 파일 저장 폴더
+        output_path = os.path.join(os.path.dirname(file_path), "outputs")
+        num_files = split_audio(file_path, output_dir=output_path)   # mp3파일 위치, 분할된 파일 저장 폴더
 
         # STT
         transcriptions = transcribe_audio_files_in_directory_with_model(
-            directory_path,
+            output_path,
             model=STT_MODEL,
             processor=PROCESSOR,
             device=DEVICE
@@ -212,7 +212,7 @@ async def process_all(file: UploadFile = File(...)):
         page_content, txt_path = segment_and_STT(file_path)
         title = os.path.basename(file_path) # mp3파일 이름을 title로 지정
         created_date = get_current_time_str()
-        print("created_date:", created_date)
+
         # 요청 데이터 준비
         data= {
             "uuid": uuid,
@@ -221,8 +221,7 @@ async def process_all(file: UploadFile = File(...)):
             "created_date": created_date,
             "txt_path": txt_path
         }
-        from pprint import pprint
-        pprint(data)
+        
         headers = {"Content-Type": "application/json", "data": json.dumps(data)}       
         async with httpx.AsyncClient() as client:
             response = await client.put("http://127.0.0.1:8000/document", headers=headers) #, headers=json.dumps(headers))

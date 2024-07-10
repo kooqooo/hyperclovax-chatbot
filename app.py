@@ -15,8 +15,8 @@ def get_answer(query: str, history) -> str:
 iface = gr.ChatInterface(
         fn = get_answer,
         textbox=gr.Textbox(placeholder="질문을 입력하세요.", container=False, scale=7),
-        title="질의응답 챗봇",
-        description="질문에 답변합니다.",
+        title="Conference Manager",
+        description="업로드한 회의록 음성 데이터베이스를 기반으로 질문에 답변합니다.",
         theme="soft",
         examples=[["다음 회의는 언제지?"], ["파이썬을 어디서 관리하는가?"], ["다음 회의까지 어떤 업무를 수행해야 하는가?"]],
         retry_btn="다시 보내기 ↩",

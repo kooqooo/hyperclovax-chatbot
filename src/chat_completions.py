@@ -100,9 +100,9 @@ class RequestData:
     def __init__(
         self,
         messages: list[dict[str, str]],
-        temperature: float = 0.1,
+        temperature: float = 0.01,
         topP: float = 0.8,
-        topK: int = 0,
+        topK: int = 5,
         maxTokens: int = 256,
         repeatPenalty: float = 5.0,
         stopBefore: list[str] = [],

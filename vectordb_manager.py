@@ -1,7 +1,8 @@
 from datetime import datetime
 from pathlib import Path
-
+import os
 import torch
+
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_huggingface.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores.chroma import Chroma
@@ -77,11 +78,16 @@ def merge_faiss_index(db1: FAISS, db2: FAISS) -> FAISS:
 def save_faiss_index(faiss: FAISS, path: str = faiss_store_name):
     faiss.save_local(path)
     
-def faiss_inference(query: str, k: int = 1) -> list[str]:
+def faiss_inference(query: str, k: int = 1):
     db = load_faiss_index(faiss_store_name)
     if db.index.ntotal < k:   # OutOfIndex 방지를 위한 k 설정
         k = db.index.ntotal
-    return list(db.similarity_search(query, k=k)[x].page_content for x in range(k))
+    if k==0:
+        return ['답변할 수 없습니다. 입력된 회의록이 없습니다.'], [''], ['']
+    result = db.similarity_search(query, k=k)
+    
+    # page_content, title, doc_id 추출
+    return list(result[x].page_content for x in range(k)), list(os.path.basename(result[x].metadata['source']) for x in range(k)), list(os.path.basename(result[x].metadata['doc_id']) for x in range(k))
 
 # doc_id가 맞는 document의 ID를 추출하는 함수
 def get_ids_by_doc_id(db_dict, target_doc_id):

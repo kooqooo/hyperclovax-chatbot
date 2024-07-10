@@ -79,7 +79,7 @@ async def show_data():
 async def get_anawer(query: str):
     if query is None:
         raise HTTPException(status_code=400, detail="Query header not found")
-    result = rag_main(query, 5)  # k개의 문서를 검색합니다.
+    result = rag_main(query, 10)  # k개의 문서를 검색합니다.
     return {"result": result}
 
 @app.put("/documents") # init or merge FAISS index
